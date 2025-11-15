@@ -9,6 +9,9 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# Import sanitization function for secure logging
+from backend.services.logging_utils import sanitize_for_logging as _sanitize_for_logging
+
 def assess_audio_quality(audio_segment: AudioSegment) -> Dict[str, Any]:
     """Assess the quality of the audio for better analysis"""
     quality_metrics = {
@@ -67,7 +70,7 @@ async def streaming_audio_analysis_pipeline(audio_path: str, session_id: str = N
         # Step 1: Transcription with Gemini (audio-based)
         logger.info("Starting audio transcription with Gemini")
         transcript = transcribe_with_gemini(wav_path)
-        logger.info(f"Transcription completed: {transcript[:100]}...")
+        logger.info(f"Transcription completed: {_sanitize_for_logging(transcript)}")
         
         if session_id:
             await analysis_streamer.send_analysis_update(session_id, "transcript", {"transcript": transcript})
