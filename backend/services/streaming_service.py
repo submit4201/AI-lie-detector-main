@@ -156,7 +156,8 @@ async def stream_analysis_pipeline(audio_path: str, session_id: str, session_con
             "enhanced_understanding": (enhanced_understanding_service.analyze, [transcript_text, session_context]),
             "psychological_analysis": (psychological_service.analyze, [transcript_text, session_context]),
             "audio_specific_analysis": (modular_audio_analysis_service.analyze, [audio_path, transcript_text, session_context]), # This one needs audio_path
-            "quantitative_metrics": (quantitative_metrics_service.analyze, [transcript_text, session_context]),
+            # Use the available async method for quantitative metrics
+            "quantitative_metrics": (quantitative_metrics_service.analyze_interaction_metrics, [transcript_text, None, None, None]),
             "conversation_flow": (conversation_flow_service.analyze, [transcript_text, session_context]),
             # Emotion and Linguistic are not async services, run in executor
             "emotion_analysis": (lambda: loop.run_in_executor(None, analyze_emotions_with_gemini, audio_path, transcript_text), []),
