@@ -150,7 +150,6 @@ backend/.env
 frontend/node_modules/
 .venv/
 .venv_old/
-.github/
 
 # Test artifacts and generated files
 tests/generated_files/*.json
