@@ -1,0 +1,57 @@
+# .coveragerc - Coverage.py configuration file
+
+[run]
+# Source code directories to measure
+source = backend
+
+# Omit certain files from coverage
+omit = 
+    */tests/*
+    */test_*.py
+    */__init__.py
+    */config.py
+    # Exclude archived tests
+    tests/archived/*
+    # Exclude main entry points that are hard to test
+    backend/main*.py
+    backend/smoke.py
+    # Exclude layer files (pipeline components)
+    backend/layer_*.py
+    backend/live_*.py
+
+[report]
+# Reporting options
+precision = 2
+show_missing = True
+skip_covered = False
+
+# Exclude lines from coverage
+exclude_lines =
+    # Standard pragma
+    pragma: no cover
+    
+    # Don't complain about missing debug code
+    def __repr__
+    if self\.debug
+    
+    # Don't complain if tests don't hit defensive code
+    raise AssertionError
+    raise NotImplementedError
+    
+    # Don't complain if non-runnable code isn't run
+    if 0:
+    if False:
+    if __name__ == .__main__.:
+    
+    # Type checking code
+    if TYPE_CHECKING:
+    @typing.overload
+    
+    # Abstract methods
+    @abstractmethod
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml
