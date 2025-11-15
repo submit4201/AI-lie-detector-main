@@ -1220,7 +1220,7 @@ class GeminiService:
         The real implementation would call the Gemini API with the prompt
         and parse the response to extract a JSON object.
         """
-        logger.info(f"GeminiService.query_gemini_for_raw_json called with prompt (first 100 chars): {prompt[:100]}...")
+        logger.info("GeminiService.query_gemini_for_raw_json called.")
         # This is a simplified placeholder.
         # A real implementation would use 'requests' or 'aiohttp' to call the Gemini API
         # and then parse the JSON from the response.
