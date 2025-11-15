@@ -91,7 +91,7 @@ class GeminiService:
                     return None
 
             else:
-                logger.error(f"Gemini API request failed with status code {response.status_code}: {response.text}")
+                logger.error(f"Gemini API request failed with status code {response.status_code}")
                 return None
 
         except httpx.ReadTimeout:
@@ -101,7 +101,7 @@ class GeminiService:
             logger.error(f"An error occurred while requesting Gemini API: {e}")
             return None
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode JSON from Gemini response: {e}. Response text: {response.text[:200] if 'response' in locals() else 'N/A'}")
+            logger.error(f"Failed to decode JSON from Gemini response: {e}")
             return None
         except Exception as e:
             logger.error(f"An unexpected error occurred in query_gemini_for_raw_json: {e}", exc_info=True)
@@ -301,8 +301,8 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
             
             return result
         else:
-            logger.error(f"Gemini API error: {response.status_code} - {response.text}")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", response.text)
+            logger.error(f"Gemini API error: {response.status_code}")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
             
     except Exception as e:
         logger.error(f"Exception in query_gemini_with_audio: {str(e)}", exc_info=True)
@@ -467,8 +467,8 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
             
             return result
         else:
-            logger.error(f"Gemini API error: {response.status_code} - {response.text}")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", response.text)
+            logger.error(f"Gemini API error: {response.status_code}")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
     except Exception as e:
         logger.error(f"Exception in query_gemini: {str(e)}", exc_info=True)
         return create_fallback_response(f"Gemini request error: {str(e)}", str(e))
@@ -935,7 +935,7 @@ def transcribe_with_gemini(audio_path: str) -> str:
             return transcript
             
         else:
-            logger.error(f"Gemini transcription API error: {response.status_code} - {response.text}")
+            logger.error(f"Gemini transcription API error: {response.status_code}")
             raise Exception(f"Gemini transcription API error: {response.status_code}")
             
     except Exception as e:
@@ -1076,7 +1076,7 @@ def analyze_emotions_with_gemini(audio_path: str, transcript: str) -> list:
                 return [{"label": "neutral", "score": 0.6}, {"label": "uncertainty", "score": 0.4}]
             
         else:
-            logger.error(f"Gemini emotion API error: {response.status_code} - {response.text}")
+            logger.error(f"Gemini emotion API error: {response.status_code}")
             return [{"label": "neutral", "score": 0.7}, {"label": "uncertainty", "score": 0.3}]
             
     except Exception as e:
