@@ -222,8 +222,6 @@ const AIDeepAnalysisSection = ({ result }) => {
   // The analysis result contains all the data directly, not in a gemini_data field
   if (!result || result.error) {
     return <AnalysisErrorCard geminiData={result} />;
-  }
-4
     <div className="space-y-6">
       {/* Accordion for AI Deep Analysis */}
       <Accordion type="multiple" className="w-full space-y-4">          {/* AI Summary */}
