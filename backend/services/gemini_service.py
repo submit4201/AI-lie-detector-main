@@ -10,6 +10,7 @@ import json # Ensure json is imported for JSONDecodeError
 
 from backend.config import GEMINI_API_KEY
 from backend.services.json_utils import parse_gemini_response, safe_json_parse, create_fallback_response, extract_text_from_gemini_response
+from backend.services.log_sanitizer import sanitize_for_logging, sanitize_error_message, sanitize_api_response
 
 from backend.models import (
     ManipulationAssessment, ArgumentAnalysis, SpeakerAttitude, EnhancedUnderstanding,
@@ -101,13 +102,13 @@ class GeminiService:
             logger.error("Gemini API request timed out.")
             return None
         except httpx.RequestError as e:
-            logger.error(f"An error occurred while requesting Gemini API: {e}")
+            logger.error(f"An error occurred while requesting Gemini API: {sanitize_error_message(e)}")
             return None
         except json.JSONDecodeError as e:
             logger.error(f"Failed to decode JSON from Gemini response: {e}")
             return None
         except Exception as e:
-            logger.error(f"An unexpected error occurred in query_gemini_for_raw_json: {e}", exc_info=True)
+            logger.error(f"An unexpected error occurred in query_gemini_for_raw_json: {sanitize_error_message(e)}")
             return None
 
 def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, Any], session_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -1211,7 +1212,7 @@ def audio_analysis_gemini(audio_path: str, transcript: str, flags: Dict[str, Any
                 return result
         else:
             logger.error(f"Gemini audio analysis API error: {response.status_code}")
-            return get_fallback_audio_analysis(f"Gemini API error: {response.status_code}")
+            return get_fallback_audio_analysis(f"Gemini API error")
             
     except Exception as e:
         logger.error(f"Exception in audio_analysis_gemini: {type(e).__name__}", exc_info=True)
@@ -1274,7 +1275,7 @@ class GeminiService:
             logger.warning("GeminiService.query_gemini_for_raw_json: Placeholder returning None. Implement actual API call.")
             return None # Services will use their fallbacks
         except Exception as e:
-            logger.error(f"GeminiService.query_gemini_for_raw_json error: {e}", exc_info=True)
+            logger.error(f"GeminiService.query_gemini_for_raw_json error: {sanitize_error_message(e)}")
             return None
 
 from backend.models import (

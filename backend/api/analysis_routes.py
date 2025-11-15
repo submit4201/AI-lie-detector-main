@@ -22,6 +22,7 @@ from backend.services.linguistic_service import analyze_linguistic_patterns
 from backend.services.session_service import conversation_history_service
 from backend.services.session_insights_service import SessionInsightsGenerator
 from backend.services.streaming_service import analysis_streamer, stream_analysis_pipeline
+from backend.services.log_sanitizer import sanitize_error_message
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -98,14 +99,14 @@ async def stream_analyze_audio(
         )
         
     except Exception as e:
-        logger.error(f"Error in streaming analysis: {e}")
+        logger.error(f"Error in streaming analysis: {sanitize_error_message(e)}")
         # Clean up temp file on error
         if temp_audio_path and os.path.exists(temp_audio_path):
             try:
                 os.unlink(temp_audio_path)
             except Exception as unlink_e:
-                logger.error(f"Error unlinking temp file during streaming error handling: {unlink_e}")
-        raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
+                logger.error(f"Error unlinking temp file during streaming error handling")
+        raise HTTPException(status_code=500, detail="Analysis error occurred")
 
 @router.post(
     "/analyze",

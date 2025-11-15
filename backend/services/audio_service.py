@@ -4,6 +4,8 @@ from pydub import AudioSegment
 from typing import List, Dict, Any
 import logging
 
+from backend.services.log_sanitizer import sanitize_for_logging
+
 # Remove speech recognition dependency and use Gemini directly
 # from services.gemini_service import transcribe_and_analyze_with_gemini  # Remove unused import
 

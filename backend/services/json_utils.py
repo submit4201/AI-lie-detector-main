@@ -3,6 +3,8 @@ import logging
 import re
 from typing import Dict, Any, Optional, Union
 
+from backend.services.log_sanitizer import sanitize_for_logging
+
 logger = logging.getLogger(__name__)
 
 def extract_json_from_text(text: str) -> Optional[str]:
@@ -74,11 +76,11 @@ def safe_json_parse(text: str, fallback_value: Any = None) -> Union[Dict[str, An
             logger.warning(f"JSON parsing failed even after fixes: {str(e)}")
     
     # If all else fails, return error with original text for debugging
-    logger.error(f"All JSON parsing strategies failed. Original text: {text[:500]}...")
+    logger.error(f"All JSON parsing strategies failed. Text length: {len(text)} characters")
     return fallback_value or {
         "error": "JSON parsing failed", 
-        "raw_text": text[:500],
-        "cleaned_json": cleaned_json[:500]
+        "raw_text_length": len(text),
+        "cleaned_json_length": len(cleaned_json) if cleaned_json else 0
     }
 
 def fix_common_json_issues(json_str: str) -> str:
@@ -171,8 +173,9 @@ def parse_gemini_response(gemini_response: Dict[str, Any], allow_partial: bool =
     # If parsing failed but we allow partial results, include debug info
     if isinstance(parsed_result, dict) and parsed_result.get('error'):
         if allow_partial:
-            parsed_result['gemini_raw_response'] = gemini_response
-            parsed_result['gemini_text'] = text
+            # Don't include full raw response, just metadata
+            parsed_result['response_keys'] = list(gemini_response.keys()) if isinstance(gemini_response, dict) else []
+            parsed_result['text_length'] = len(text)
         
         logger.warning(f"Gemini response parsing failed: {parsed_result.get('error')}")
     
