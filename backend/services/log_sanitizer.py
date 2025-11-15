@@ -101,7 +101,7 @@ def sanitize_error_message(error: Exception) -> str:
     
     # Redact potential file paths that might contain usernames
     error_msg = re.sub(r'/home/[^/]+/', '/home/[USER]/', error_msg)
-    error_msg = re.sub(r'C:\\Users\\[^\\]+\\', 'C:\\Users\\[USER]\\', error_msg)
+    error_msg = re.sub(r'C:\\\\Users\\\\[^\\\\]+\\\\', r'C:\\Users\\[USER]\\', error_msg)
     
     return f"{error_type}: {error_msg}"
 
