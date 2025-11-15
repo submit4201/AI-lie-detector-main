@@ -306,6 +306,7 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
         else:
             logger.error(f"Gemini API error: {response.status_code}")
             return create_fallback_response(f"Gemini API error: {response.status_code}", "API request failed")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
             
     except Exception as e:
         logger.error(f"Exception in query_gemini_with_audio: {type(e).__name__}", exc_info=True)
@@ -472,6 +473,7 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
         else:
             logger.error(f"Gemini API error: {response.status_code}")
             return create_fallback_response(f"Gemini API error: {response.status_code}", "API request failed")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
     except Exception as e:
         logger.error(f"Exception in query_gemini: {type(e).__name__}", exc_info=True)
         return create_fallback_response(f"Gemini request error", "API request failed")
@@ -935,6 +937,9 @@ def transcribe_with_gemini(audio_path: str) -> str:
                 raise Exception(f"No transcription content received from Gemini. Reason: {block_reason_message}")
             
             logger.info(f"Successfully transcribed audio: {_sanitize_for_logging(transcript)}")
+                raise Exception(f"No transcription content received from Gemini. Reason: {block_reason_message}")
+            
+            logger.info(f"Successfully transcribed audio""
             return transcript
             
         else:
