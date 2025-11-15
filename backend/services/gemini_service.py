@@ -1202,7 +1202,7 @@ def audio_analysis_gemini(audio_path: str, transcript: str, flags: Dict[str, Any
                 logger.info("Successfully parsed Gemini audio analysis response")
                 return result
         else:
-            logger.error(f"Gemini audio analysis API error: {response.status_code} - {response.text}")
+            logger.error(f"Gemini audio analysis API error: {response.status_code}")
             return get_fallback_audio_analysis(f"Gemini API error: {response.status_code}")
             
     except Exception as e:
