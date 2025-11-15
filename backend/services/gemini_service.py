@@ -928,10 +928,9 @@ def transcribe_with_gemini(audio_path: str) -> str:
                     logger.warning(f"No transcript extracted, found safetyRatings: {json.dumps(safety_ratings)}")
                     block_reason_message = f"Content may have been filtered due to safety ratings: {json.dumps(safety_ratings)}"
                 
-                logger.error(f"Failed to extract transcript from Gemini response. Reason: {block_reason_message}. Full response: {json.dumps(gemini_response)}")
                 raise Exception(f"No transcription content received from Gemini. Reason: {block_reason_message}")
             
-            logger.info(f"Successfully transcribed audio: \"{transcript[:100]}...\"")
+            logger.info(f"Successfully transcribed audio""
             return transcript
             
         else:
