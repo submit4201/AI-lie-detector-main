@@ -102,7 +102,7 @@ class GeminiService:
             logger.error(f"An error occurred while requesting Gemini API: {sanitize_error_message(e)}")
             return None
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode JSON from Gemini response")
+            logger.error(f"Failed to decode JSON from Gemini response: {e}")
             return None
         except Exception as e:
             logger.error(f"An unexpected error occurred in query_gemini_for_raw_json: {sanitize_error_message(e)}")
@@ -303,7 +303,7 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
             return result
         else:
             logger.error(f"Gemini API error: {response.status_code}")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", "")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
             
     except Exception as e:
         logger.error(f"Exception in query_gemini_with_audio: {sanitize_error_message(e)}")
@@ -469,7 +469,7 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
             return result
         else:
             logger.error(f"Gemini API error: {response.status_code}")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", "")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
     except Exception as e:
         logger.error(f"Exception in query_gemini: {sanitize_error_message(e)}")
         return create_fallback_response(f"Gemini request error", "")
