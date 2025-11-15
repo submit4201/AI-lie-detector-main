@@ -335,7 +335,7 @@ async def stream_analysis_pipeline(audio_path: str, session_id: str, session_con
             yield sse_format({'type': 'result', 'analysis_type': 'audio_quality', 'data': audio_quality_data})
         except Exception as e:
             logger.error(f"Streaming: Audio quality assessment failed: {e}")
-            yield sse_format({'type': 'error', 'message': f'Audio quality assessment error: {str(e)}'})
+            yield sse_format({'type': 'error', 'message': 'Audio quality assessment error: An internal error occurred.'})
 
         # 1. Transcription
         current_step += 1
@@ -395,7 +395,7 @@ async def stream_analysis_pipeline(audio_path: str, session_id: str, session_con
 
     except Exception as e:
         logger.error(f"Critical error in streaming_analysis_pipeline: {e}", exc_info=True)
-        yield sse_format({'type': 'error', 'message': f'Critical pipeline error: {str(e)}'})
+        yield sse_format({'type': 'error', 'message': 'Critical pipeline error: An internal error occurred.'})
     finally:
         # Clean up temporary audio file (original audio_path is temp path from analysis_routes)
         try:
