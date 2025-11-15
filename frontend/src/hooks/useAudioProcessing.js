@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react';
-import { useStreamingAnalysis } from './useStreamingAnalysis';
 
 const API_URL = 'http://localhost:8000'; // DO NOT CHANGE THIS IF ITS NOT CONNECTING STOP THE BACKEND AND ENSURE IT ON THIS PORT
 
@@ -9,19 +8,9 @@ export const useAudioProcessing = (getSessionId, createNewSessionIfNeeded) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [analysisProgress, setAnalysisProgress] = useState(0); // Example: 0-100
-  const [useStreaming, setUseStreaming] = useState(true); // Toggle for streaming vs traditional
 
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-
-  // Streaming analysis hook
-  const {
-    isStreaming: _IS_STREAMING,
-    streamingProgress,
-    streamingError,
-    partialResults: _PARTIAL_RESULTS,
-    startStreamingAnalysis,
-  } = useStreamingAnalysis(getSessionId(), null);
 
   const validateAudioFile = (selectedFile) => {
     if (!selectedFile) return "No file selected.";
@@ -52,58 +41,31 @@ export const useAudioProcessing = (getSessionId, createNewSessionIfNeeded) => {
     formData.append('session_id', currentSessionId);
 
     try {
-      // Use streaming analysis if available and enabled
-      if (useStreaming && startStreamingAnalysis) {
-        console.log('Starting streaming analysis...');
-        
-        // Monitor streaming progress
-        const progressInterval = setInterval(() => {
-          if (streamingProgress !== undefined) {
-            setAnalysisProgress(streamingProgress);
-          }
-        }, 100);
+      console.log('Submitting audio for v2 analysis...');
 
-        const result = await startStreamingAnalysis(file);
-        clearInterval(progressInterval);
-        
-        if (streamingError) {
-          throw new Error(streamingError);
-        }
-        
-        setLoading(false);
-        setAnalysisProgress(100);
-        return result;
-      } else {
-        // Fallback to traditional analysis
-        console.log('Using traditional analysis...');
-        
-        // Simulate progress for demo purposes
-        let progress = 0;
-        const interval = setInterval(() => {
-          progress += 10;
-          if (progress <= 100) {
-            setAnalysisProgress(progress);
-          }
-        }, 200);
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress = Math.min(progress + 15, 95);
+        setAnalysisProgress(progress);
+      }, 200);
 
-        const response = await fetch(`${API_URL}/analyze`, {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch(`${API_URL}/v2/analyze`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        clearInterval(interval);
-        setAnalysisProgress(100);
+      clearInterval(interval);
+      setAnalysisProgress(100);
 
-        if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.detail || 'Failed to analyze audio');
-        }
-        
-        const analysisResult = await response.json();
-        console.log('Analysis results from API:', analysisResult);
-        setLoading(false);
-        return analysisResult;
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Failed to analyze audio');
       }
+      
+      const analysisResult = await response.json();
+      console.log('Analysis results from API:', analysisResult);
+      setLoading(false);
+      return analysisResult;
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err.message || "An error occurred during analysis.");
@@ -111,7 +73,7 @@ export const useAudioProcessing = (getSessionId, createNewSessionIfNeeded) => {
       setAnalysisProgress(0);
       return null;
     }
-  }, [file, getSessionId, createNewSessionIfNeeded, useStreaming, startStreamingAnalysis, streamingProgress, streamingError]);
+  }, [file, getSessionId, createNewSessionIfNeeded]);
 
   const startRecording = useCallback(async () => {
     if (recording) return;
@@ -158,9 +120,8 @@ export const useAudioProcessing = (getSessionId, createNewSessionIfNeeded) => {
     recording,
     loading,
     error,
+    setError,
     analysisProgress,
-    useStreaming,
-    setUseStreaming,
     validateAudioFile,
     handleUpload,
     startRecording,

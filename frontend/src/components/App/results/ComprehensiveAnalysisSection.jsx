@@ -1,5 +1,10 @@
 import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  buildServiceAwareEmotionAnalysis,
+  buildServiceBackedLinguisticAnalysis,
+  getServicesFromResult,
+} from "@/lib/serviceSelectors";
 
 const TabButton = ({ isActive, onClick, children, icon }) => (
   <button
@@ -54,9 +59,16 @@ const ProgressBar = ({ value, max = 100, color = "blue", label }) => (
   </div>
 );
 
-const ComprehensiveAnalysisSection = ({ result }) => {
+const ComprehensiveAnalysisSection = ({ result: propResult, analysisResults, services }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  if (!result || !result.linguistic_analysis) {
+  const result = propResult || analysisResults || null;
+  const serviceMap = services || getServicesFromResult(result);
+  const linguistic_analysis = buildServiceBackedLinguisticAnalysis(serviceMap, result?.linguistic_analysis);
+  const emotional_analysis = buildServiceAwareEmotionAnalysis(serviceMap, result?.emotional_analysis);
+  const audio_quality = result?.audio_quality;
+  const session_insights = result?.session_insights;
+
+  if (!result || !linguistic_analysis) {
     return (
       <Card className="section-container analysis-breakdown">
         <CardContent className="p-6">
@@ -68,8 +80,6 @@ const ComprehensiveAnalysisSection = ({ result }) => {
       </Card>
     );
   }
-
-  const { linguistic_analysis, emotional_analysis, audio_quality, session_insights } = result;
 
   const tabs = [
     { id: 'overview', label: 'Overview', icon: '📊' },

@@ -1,12 +1,8 @@
-"""QuantitativeMetricsService v2
+"""Archived QuantitativeMetricsService v1 implementation.
 
-Migrated from backend.services.quantitative_metrics_service (now archived under
-backend/services/archived/quantitative_metrics_service_v1.py). The v1 service
-combined local linguistic heuristics with Gemini-generated interaction metrics
-to power the "quantitative_metrics" slice of the AI Lie Detector pipeline.
-
-This v2 class preserves that utility while adopting the shared v2 AnalysisService
-protocol, google-genai SDK client, and richer InteractionMetrics outputs.
+This copy preserves the original FastAPI v1 service logic for reference
+while the active codebase migrates to backend.services.v2_services.
+Do not import this module from production code.
 """
 
 try:
@@ -19,8 +15,8 @@ except Exception:
             self.message = message
             self.status_code = status_code
 from backend.models import InteractionMetrics, NumericalLinguisticMetrics # Updated model name
-from typing import List, Dict, Optional, Any, TYPE_CHECKING, Tuple
-from backend.services.v2_services.analysis_protocol import AnalysisService
+from typing import List, Dict, Optional, Any, TYPE_CHECKING
+from backend.services.v2.analysis_protocol import AnalysisService
 import json
 import re
 
@@ -28,7 +24,7 @@ import re
 if TYPE_CHECKING:
     from backend.services.gemini_service import GeminiService
 
-from backend.services.v2_services.gemini_client import GeminiClientV2 as DefaultGeminiClient
+from backend.services.v2.gemini_client import GeminiClientV2 as DefaultGeminiClient
 
 
 class QuantitativeMetricsService(AnalysisService):
@@ -127,122 +123,6 @@ class QuantitativeMetricsService(AnalysisService):
         self.NumericalLinguisticMetrics = NumericalLinguisticMetrics
 
         return self.NumericalLinguisticMetrics
-
-    @staticmethod
-    def _normalize_sentiment_trend(
-        trend_candidate: Optional[Any],
-        fallback: Optional[List[Dict[str, Any]]] = None,
-    ) -> List[Dict[str, Any]]:
-        if isinstance(trend_candidate, list):
-            return trend_candidate
-        if isinstance(trend_candidate, dict):
-            return [trend_candidate]
-        if isinstance(trend_candidate, (int, float)):
-            return [{"sentiment_score": float(trend_candidate)}]
-        if isinstance(trend_candidate, str) and trend_candidate.strip():
-            return [{"sentiment_label": trend_candidate.strip()}]
-        return fallback or []
-
-    @staticmethod
-    def _normalize_emotion_distribution(candidate: Optional[Any]) -> List[Dict[str, Any]]:
-        if isinstance(candidate, list):
-            return candidate
-        if isinstance(candidate, dict):
-            return [candidate]
-        if isinstance(candidate, str) and candidate.strip():
-            return [{"emotion": candidate.strip(), "score": None}]
-        return []
-
-    @staticmethod
-    def _coerce_string_list(candidate: Optional[Any]) -> List[str]:
-        if candidate is None:
-            return []
-        if isinstance(candidate, list):
-            return [str(item) for item in candidate]
-        return [str(candidate)]
-
-    @staticmethod
-    def _coerce_float(value: Any) -> Optional[float]:
-        try:
-            if value is None:
-                return None
-            return float(value)
-        except (ValueError, TypeError):
-            return None
-
-    def _estimate_sentiment_locally(self, text: str) -> Tuple[str, float, float, List[Dict[str, Any]]]:
-        positive_words = {
-            "good", "great", "excellent", "positive", "confident", "sure", "clear", "definitely", "absolutely",
-            "trust", "honest", "calm", "secure", "upbeat", "happy", "glad", "yes", "agree",
-        }
-        negative_words = {
-            "bad", "poor", "negative", "uncertain", "doubt", "worry", "concern", "angry", "mad", "frustrated",
-            "anxious", "sad", "no", "disagree", "hesitant", "nervous", "stress", "confused",
-        }
-        tokens = re.findall(r"\b\w+\b", text.lower())
-        if not tokens:
-            return "neutral", 0.5, 0.1, [{"emotion": "neutral", "score": 1.0}]
-
-        positive_hits = sum(1 for token in tokens if token in positive_words)
-        negative_hits = sum(1 for token in tokens if token in negative_words)
-        total_hits = positive_hits + negative_hits
-
-        if total_hits == 0:
-            return "neutral", 0.5, 0.1, [{"emotion": "neutral", "score": 1.0}]
-
-        raw_score = (positive_hits - negative_hits) / total_hits  # -1 to 1
-        normalized_score = round((raw_score + 1) / 2, 3)  # 0 to 1
-        sentiment_label = "positive" if raw_score > 0.1 else "negative" if raw_score < -0.1 else "neutral"
-        sentiment_confidence = round(min(1.0, max(0.1, abs(raw_score))), 3)
-
-        emotion_distribution: List[Dict[str, Any]] = []
-        if positive_hits:
-            emotion_distribution.append({"emotion": "positive", "score": round(positive_hits / total_hits, 3)})
-        if negative_hits:
-            emotion_distribution.append({"emotion": "negative", "score": round(negative_hits / total_hits, 3)})
-        if not emotion_distribution:
-            emotion_distribution.append({"emotion": "neutral", "score": 1.0})
-
-        return sentiment_label, normalized_score, sentiment_confidence, emotion_distribution
-
-    def _derive_engagement_features(self, text: str) -> Tuple[Optional[float], Optional[str], Optional[float], List[str]]:
-        if not text:
-            return None, None, None, []
-
-        sentences = [segment for segment in re.split(r"[.!?]+", text) if segment.strip()]
-        question_count = text.count("?")
-        declarative_count = max(len(sentences) - question_count, 1)
-        question_ratio = round(question_count / declarative_count, 2) if question_count else 0.0
-
-        exclamation_count = text.count("!")
-        emphasis_tokens = re.findall(r"\b[A-Z]{3,}\b", text)
-        token_length = max(len(sentences), 1)
-        energy_score = round(min(1.0, (question_count + exclamation_count + len(emphasis_tokens)) / token_length), 3)
-
-        if energy_score >= 0.6 or question_ratio >= 0.5:
-            engagement_level = "high"
-        elif energy_score >= 0.3 or question_ratio >= 0.25:
-            engagement_level = "medium"
-        else:
-            engagement_level = "low"
-
-        notable_events: List[str] = []
-        if question_ratio >= 0.5:
-            notable_events.append("high inquisitiveness")
-        if exclamation_count >= 3:
-            notable_events.append("heightened emphasis")
-        if len(emphasis_tokens) >= 2:
-            notable_events.append("frequent emphasis words")
-
-        filler_words = ["um", "uh", "like", "you know", "sort of", "kind of"]
-        words = re.findall(r"\b\w+\b", text.lower())
-        filler_hits = sum(1 for token in words if token in filler_words)
-        if words:
-            filler_ratio = filler_hits / len(words)
-            if filler_ratio >= 0.05:
-                notable_events.append("high filler usage")
-
-        return question_ratio, engagement_level, energy_score, notable_events
     async def analyze_interaction_metrics(
         self, 
         text: str, 
@@ -279,49 +159,33 @@ class QuantitativeMetricsService(AnalysisService):
                 sentiment_summary = "Sentiment trend data provided but is not JSON serializable for the prompt."
 
         prompt = f"""Analyze the following transcript and associated data to determine interaction metrics.
-                    Transcript (may be partial or full, use for context if diarization is primary focus):
-                    "{text if text else 'Transcript not provided for this specific analysis, rely on diarization and sentiment data.'}"
+                            Transcript (may be partial or full, use for context if diarization is primary focus):
+                            "{text if text else 'Transcript not provided for this specific analysis, rely on diarization and sentiment data.'}"
 
-                    {diarization_summary}
-                    {sentiment_summary}
-                    Audio duration (if available): {audio_duration_seconds if audio_duration_seconds else 'Not provided'} seconds.
+                            {diarization_summary}
+                            {sentiment_summary}
+                            Audio duration (if available): {audio_duration_seconds if audio_duration_seconds else 'Not provided'} seconds.
 
-                    Based on the provided information, calculate or infer the following interaction metrics:
-                    1.  Talk-to-Listen Ratio (Optional[float])
-                    2.  Speaker Turn Duration Average (Optional[float], in seconds)
-                    3.  Interruptions Count (Optional[int])
-                    4.  Sentiment Trend (List[Dict[str, Any]])
-                    5.  Overall Sentiment Label (str: positive/neutral/negative/etc.)
-                    6.  Overall Sentiment Score (float between 0-1) and Sentiment Confidence (float between 0-1)
-                    7.  Emotion Distribution (List[Dict] with keys such as emotion/score)
-                    8.  Engagement Level (string descriptor such as High/Medium/Low)
-                    9.  Question-to-Statement Ratio (float)
-                    10. Conversation Energy Score (float 0-1 based on pacing/emphasis cues)
-                    11. Notable Interaction Events (List[str] describing important behaviors observed)
+                            Based on the provided information, calculate or infer the following interaction metrics:
+                            1.  Talk-to-Listen Ratio (Optional[float]): If multiple speakers are detailed in diarization, estimate this. This could be the ratio of the primary speaker's time to total time, or to other speakers' time. Specify context. If only one speaker or unclear, this may be null or not applicable.
+                            2.  Speaker Turn Duration Average (Optional[float], in seconds): Average duration of speaker turns. If diarization is available, use it. Otherwise, this may be null.
+                            3.  Interruptions Count (Optional[int]): Number of interruptions detected. This typically requires diarization providing overlap information or clear textual cues (e.g., "--"). If not inferable, this may be null.
+                            4.  Sentiment Trend (List[Dict[str, Any]]): If sentiment_trend_data_input is provided, use it directly. Otherwise, if the transcript is substantial, you can try to infer a basic trend (e.g., positive start, negative end), or default to an empty list. Example: [{{"segment": "opening", "sentiment_score": 0.7, "sentiment_label": "positive"}}].
 
-                    Provide your analysis as a JSON object matching the structure of the InteractionMetrics model:
-                    {{
-                    "talk_to_listen_ratio": float_or_null,
-                    "speaker_turn_duration_avg_seconds": float_or_null,
-                    "interruptions_count": int_or_null,
-                    "sentiment_trend": [],
-                    "overall_sentiment_label": str_or_null,
-                    "overall_sentiment_score": float_or_null,
-                    "sentiment_confidence": float_or_null,
-                    "emotion_distribution": list_of_dicts,
-                    "engagement_level": str_or_null,
-                    "question_to_statement_ratio": float_or_null,
-                    "conversation_energy_score": float_or_null,
-                    "notable_interaction_events": list_of_strings
-                    }}
-                    If specific details cannot be reliably inferred from the provided data, use null for optional fields or appropriate defaults like empty lists for sentiment_trend.
-                    Focus on deriving these from speaker diarization and sentiment data primarily. The transcript is for context.
-                    Ensure the output is valid JSON and can be parsed directly into the InteractionMetrics model.
-                    """
+                            Provide your analysis as a JSON object matching the structure of the InteractionMetrics model:
+                            {{
+                            "talk_to_listen_ratio": float_or_null,
+                            "speaker_turn_duration_avg_seconds": float_or_null,
+                            "interruptions_count": int_or_null,
+                            "sentiment_trend": [] 
+                            }}
+                            If specific details cannot be reliably inferred from the provided data, use null for optional fields or appropriate defaults like empty lists for sentiment_trend.
+                            Focus on deriving these from speaker diarization and sentiment data primarily. The transcript is for context.
+                            Ensure the output is valid JSON and can be parsed directly into the InteractionMetrics model.
+                            """
         
         try:
-            # Use the v2 Gemini client for structured analysis
-            raw_analysis = await self.gemini_client.query_json(prompt)
+            raw_analysis = await self.gemini_service.query_gemini_for_raw_json(prompt)
             if isinstance(raw_analysis, str):
                 # log that this came back as a string
                 print("LLM returned raw analysis as string.")
@@ -343,26 +207,11 @@ class QuantitativeMetricsService(AnalysisService):
 
             if isinstance(raw_analysis, dict):
                 analysis_data = raw_analysis
-                normalized_trend = self._normalize_sentiment_trend(
-                    analysis_data.get("sentiment_trend"),
-                    sentiment_trend_data_input,
-                )
-                emotion_distribution = self._normalize_emotion_distribution(analysis_data.get("emotion_distribution"))
-                notable_events = self._coerce_string_list(analysis_data.get("notable_interaction_events"))
-
                 return InteractionMetrics(
-                    talk_to_listen_ratio=self._coerce_float(analysis_data.get("talk_to_listen_ratio")),
-                    speaker_turn_duration_avg_seconds=self._coerce_float(analysis_data.get("speaker_turn_duration_avg_seconds")),
+                    talk_to_listen_ratio=analysis_data.get("talk_to_listen_ratio"),
+                    speaker_turn_duration_avg_seconds=analysis_data.get("speaker_turn_duration_avg_seconds"),
                     interruptions_count=analysis_data.get("interruptions_count"),
-                    sentiment_trend=normalized_trend,
-                    overall_sentiment_label=analysis_data.get("overall_sentiment_label"),
-                    overall_sentiment_score=self._coerce_float(analysis_data.get("overall_sentiment_score")),
-                    sentiment_confidence=self._coerce_float(analysis_data.get("sentiment_confidence")),
-                    emotion_distribution=emotion_distribution,
-                    engagement_level=analysis_data.get("engagement_level"),
-                    question_to_statement_ratio=self._coerce_float(analysis_data.get("question_to_statement_ratio")),
-                    conversation_energy_score=self._coerce_float(analysis_data.get("conversation_energy_score")),
-                    notable_interaction_events=notable_events,
+                    sentiment_trend=analysis_data.get("sentiment_trend", sentiment_trend_data_input if sentiment_trend_data_input is not None else [])
                 )
             else:
                 return self._fallback_interaction_analysis(text, speaker_diarization, sentiment_trend_data_input, audio_duration_seconds)
@@ -377,20 +226,6 @@ class QuantitativeMetricsService(AnalysisService):
         talk_ratio = None
         avg_turn_duration = None
         interruptions = None
-
-        normalized_trend = self._normalize_sentiment_trend(sentiment_trend_data_input)
-        (
-            overall_sentiment_label,
-            overall_sentiment_score,
-            sentiment_confidence,
-            emotion_distribution,
-        ) = self._estimate_sentiment_locally(text)
-        (
-            question_ratio,
-            engagement_level,
-            energy_score,
-            notable_events,
-        ) = self._derive_engagement_features(text)
 
         if speaker_diarization and len(speaker_diarization) > 0:
             total_turn_duration = 0
@@ -425,31 +260,15 @@ class QuantitativeMetricsService(AnalysisService):
                     # Example: ratio of the most dominant speaker's time to total audio duration
                     max_speaker_time = max(speaker_times.values())
                     talk_ratio = round(max_speaker_time / audio_duration_seconds, 2) if max_speaker_time <= audio_duration_seconds else 1.0
-
-        if talk_ratio and talk_ratio >= 0.75:
-            notable_events.append("dominant speaker detected")
-        if interruptions and interruptions > 0:
-            notable_events.append("possible interruptions observed")
         
-        final_sentiment_trend = normalized_trend
-        deduped_events: List[str] = []
-        for event in notable_events:
-            if event not in deduped_events:
-                deduped_events.append(event)
+        # Use provided sentiment trend or a default empty list
+        final_sentiment_trend = sentiment_trend_data_input if sentiment_trend_data_input is not None else []
 
         return InteractionMetrics(
             talk_to_listen_ratio=talk_ratio,
             speaker_turn_duration_avg_seconds=avg_turn_duration,
             interruptions_count=interruptions,
-            sentiment_trend=final_sentiment_trend,
-            overall_sentiment_label=overall_sentiment_label,
-            overall_sentiment_score=overall_sentiment_score,
-            sentiment_confidence=sentiment_confidence,
-            emotion_distribution=emotion_distribution,
-            engagement_level=engagement_level,
-            question_to_statement_ratio=question_ratio,
-            conversation_energy_score=energy_score,
-            notable_interaction_events=deduped_events,
+            sentiment_trend=final_sentiment_trend
         )
 
     async def get_numerical_linguistic_metrics(self, text: str, audio_duration_seconds: Optional[float] = None) -> NumericalLinguisticMetrics:
@@ -471,11 +290,10 @@ class QuantitativeMetricsService(AnalysisService):
         try:
             # Try to get Gemini analysis first
             interaction_metrics = await self.analyze_interaction_metrics(
-                text=transcript or "",
-                audio_data=audio_bytes,
-                speaker_diarization=speaker_diarization,
-                sentiment_trend_data_input=sentiment_trend_data_input,
-                audio_duration_seconds=audio_duration_seconds,
+                transcript or "", 
+                speaker_diarization, 
+                sentiment_trend_data_input,
+                audio_duration_seconds
             )
         except Exception as e:
             # Fallback to local-only analysis if Gemini fails

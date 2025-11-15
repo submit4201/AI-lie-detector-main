@@ -1,6 +1,15 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge"; // For risk assessment
+import {
+  deriveConversationGuidanceFromServices,
+  deriveCredibilityScoreFromServices,
+  deriveRecommendationsFromServices,
+  deriveRedFlagsFromServices,
+  deriveRiskAssessmentFromServices,
+  deriveSummaryFromServices,
+  getServicesFromResult,
+} from "@/lib/serviceSelectors";
 
 // Utility function to truncate text
 const getConciseText = (text, maxLength = 80) => {
@@ -8,19 +17,20 @@ const getConciseText = (text, maxLength = 80) => {
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 };
 
-const KeyHighlightsSection = ({ result, getCredibilityColor, getCredibilityLabel }) => {
+const KeyHighlightsSection = ({ result, services, getCredibilityColor, getCredibilityLabel }) => {
   if (!result) {
     return null;
   }
 
-  const {
-    credibility_score,
-    risk_assessment,
-    red_flags_per_speaker,
-    gemini_summary,
-    recommendations, // Destructure new data
-    enhanced_understanding // Destructure new data
-  } = result;
+  const serviceMap = services || getServicesFromResult(result);
+  const credibility_score = deriveCredibilityScoreFromServices(serviceMap, result.credibility_score);
+  const risk_assessment = deriveRiskAssessmentFromServices(serviceMap, result.risk_assessment);
+  const red_flags_per_speaker = deriveRedFlagsFromServices(serviceMap, result.red_flags_per_speaker);
+  const gemini_summary = deriveSummaryFromServices(serviceMap, result.gemini_summary);
+  const recommendations = deriveRecommendationsFromServices(serviceMap, result.recommendations);
+  const enhanced_understanding = deriveConversationGuidanceFromServices(serviceMap, result.enhanced_understanding);
+  const fallbackCredibilityColor = getCredibilityColor || (() => "text-gray-300");
+  const fallbackCredibilityLabel = getCredibilityLabel || (() => "N/A");
 
   const getRiskColorClasses = (riskLevel) => {
     if (riskLevel === 'high') return 'bg-red-500/30 text-red-200 border-red-400/50';
@@ -52,14 +62,14 @@ const KeyHighlightsSection = ({ result, getCredibilityColor, getCredibilityLabel
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* 1. Overall Credibility Score */}
-          {credibility_score !== undefined && (
+          {credibility_score !== undefined && credibility_score !== null && (
             <div className="bg-black/30 backdrop-blur-sm border border-white/20 rounded-lg p-5 flex flex-col items-center justify-center text-center">
               <h3 className="text-lg font-semibold text-white mb-3">🎯 Overall Credibility</h3>
-              <div className={`text-5xl font-bold ${getCredibilityColor(credibility_score / 100)} mb-2`}>
+              <div className={`text-5xl font-bold ${fallbackCredibilityColor(credibility_score / 100)} mb-2`}>
                 {credibility_score}/100
               </div>
-              <div className={`text-xl font-semibold ${getCredibilityColor(credibility_score / 100)} mb-3`}>
-                {getCredibilityLabel(credibility_score / 100)}
+              <div className={`text-xl font-semibold ${fallbackCredibilityColor(credibility_score / 100)} mb-3`}>
+                {fallbackCredibilityLabel(credibility_score / 100)}
               </div>              <div className="w-full bg-black/30 rounded-full h-2.5">
                 <div
                   className={`h-2.5 rounded-full ${getCredibilityGradientClass(credibility_score)}`}

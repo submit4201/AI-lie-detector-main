@@ -2,17 +2,23 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 
 const API_URL = 'http://localhost:8000'; // DO NOT CHANGE THIS IF ITS NOT CONNECTING STOP THE BACKEND AND ENSURE IT ON THIS PORT
 
+const createEmptyAggregate = () => ({
+  transcript: null,
+  services: {},
+  errors: [],
+  meta: {},
+});
+
 export const useStreamingAnalysis = (sessionId, onAnalysisUpdate) => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingProgress, setStreamingProgress] = useState(0);
   const [streamingStep, setStreamingStep] = useState('');
   const [streamingError, setStreamingError] = useState(null);
-  const [partialResults, setPartialResults] = useState({});
+  const [partialResults, setPartialResults] = useState(null);
   const [lastReceivedComponent, setLastReceivedComponent] = useState(null);
   const [componentsReceived, setComponentsReceived] = useState([]);
   
   const websocketRef = useRef(null);
-  const eventSourceRef = useRef(null);
 
   // WebSocket connection for real-time updates
   const connectWebSocket = useCallback(() => {
@@ -39,7 +45,7 @@ export const useStreamingAnalysis = (sessionId, onAnalysisUpdate) => {
             
             case 'analysis_update':
               setPartialResults(prev => ({
-                ...prev,
+                ...(prev ?? {}),
                 [message.analysis_type]: message.data
               }));
               if (onAnalysisUpdate) {
@@ -82,7 +88,7 @@ export const useStreamingAnalysis = (sessionId, onAnalysisUpdate) => {
     }
   }, []);
   // Server-Sent Events streaming analysis
-  const startStreamingAnalysis = useCallback(async (audioFile) => {
+  const startStreamingAnalysis = useCallback(async (audioFile, transcriptOverride = '') => {
     if (!audioFile || !sessionId) {
       setStreamingError('Missing audio file or session ID');
       return null;
@@ -92,17 +98,20 @@ export const useStreamingAnalysis = (sessionId, onAnalysisUpdate) => {
     setStreamingError(null);
     setStreamingProgress(0);
     setStreamingStep('Initializing...');
-    setPartialResults({});
+    const initialAggregate = createEmptyAggregate();
+    setPartialResults(initialAggregate);
+    setComponentsReceived([]);
+    setLastReceivedComponent(null);
 
     try {
       const formData = new FormData();
       formData.append('audio', audioFile);
       formData.append('session_id', sessionId);
+      if (transcriptOverride) {
+        formData.append('transcript', transcriptOverride);
+      }
 
-      // Start EventSource for streaming updates
-      const eventSourceUrl = `${API_URL}/analyze/stream`;
-      
-      // Use fetch to upload the file and get streaming response
+      const eventSourceUrl = `${API_URL}/v2/analyze/stream`;
       const response = await fetch(eventSourceUrl, {
         method: 'POST',
         body: formData,
@@ -112,94 +121,119 @@ export const useStreamingAnalysis = (sessionId, onAnalysisUpdate) => {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Read the streaming response
       const reader = response.body.getReader();
-      let finalResult = {};  // Initialize as empty object, not null
-      let accumulatedResults = {}; // Local accumulator for results
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResult = null;
+      let fallbackResult = initialAggregate;
+
+      const processEvent = (rawEvent) => {
+        const trimmed = rawEvent.trim();
+        if (!trimmed.startsWith('data:')) {
+          return;
+        }
+        const jsonPayload = trimmed.slice(5).trimStart();
+        if (!jsonPayload) {
+          return;
+        }
+        try {
+          const event = JSON.parse(jsonPayload);
+          console.log('SSE data received:', event);
+          switch (event.event) {
+            case 'analysis.update': {
+              const serviceName = event.service || 'unknown';
+              const payload = event.payload || {};
+
+              setPartialResults(prev => {
+                const base = prev ?? createEmptyAggregate();
+                const nextValue = (() => {
+                  if (serviceName === 'transcript') {
+                    return {
+                      ...base,
+                      transcript: payload,
+                    };
+                  }
+                  return {
+                    ...base,
+                    services: {
+                      ...base.services,
+                      [serviceName]: payload,
+                    },
+                    errors: event.errors
+                      ? [...base.errors, { service: serviceName, message: event.errors }]
+                      : base.errors,
+                  };
+                })();
+                fallbackResult = nextValue;
+                return nextValue;
+              });
+
+              setLastReceivedComponent(serviceName);
+              setComponentsReceived(prev => (prev.includes(serviceName) ? prev : [...prev, serviceName]));
+              setTimeout(() => setLastReceivedComponent(null), 2500);
+
+              if (onAnalysisUpdate) {
+                onAnalysisUpdate(serviceName, payload);
+              }
+              break;
+            }
+            case 'analysis.progress': {
+              const completed = event.completed || 0;
+              const total = event.total || 1;
+              const percent = Math.min(100, Math.round((completed / total) * 100));
+              setStreamingProgress(percent);
+              setStreamingStep(`Processed ${completed} of ${total} services`);
+              break;
+            }
+            case 'analysis.done': {
+              finalResult = event.payload || null;
+              fallbackResult = finalResult;
+              setPartialResults(finalResult);
+              setStreamingProgress(100);
+              setStreamingStep('Analysis complete');
+              break;
+            }
+            default:
+              break;
+          }
+        } catch (error) {
+          console.error('Error parsing SSE data:', error);
+        }
+      };
 
       try {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          // Decode the chunk
-          const chunk = new TextDecoder().decode(value);
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try {
-                const data = JSON.parse(line.slice(6));
-                console.log('SSE data received:', data);
-
-                switch (data.type) {
-                  case 'progress':
-                    setStreamingProgress((data.progress / data.total) * 100);
-                    setStreamingStep(data.step || 'Processing...');
-                    break;
-                    case 'result':
-                    // Update both local accumulator and state
-                    accumulatedResults[data.analysis_type] = data.data;
-                    
-                    // Track the most recently received component for UI feedback
-                    setLastReceivedComponent(data.analysis_type);
-                    setComponentsReceived(prev => [...prev, data.analysis_type]);
-                    
-                    setPartialResults(prev => ({
-                      ...prev,
-                      [data.analysis_type]: data.data
-                    }));
-                    
-                    // Clear the "just received" indicator after 3 seconds
-                    setTimeout(() => {
-                      setLastReceivedComponent(null);
-                    }, 3000);
-                    
-                    if (onAnalysisUpdate) {
-                      onAnalysisUpdate(data.analysis_type, data.data);
-                    }
-                    break;
-                    case 'complete':
-                    setStreamingProgress(100);
-                    setStreamingStep('Analysis Complete');
-                    // Use the local accumulator for final result
-                    finalResult = { ...accumulatedResults };
-                    console.log('Streaming complete, final result:', finalResult);
-                    // Set streaming to false immediately when complete
-                    setIsStreaming(false);
-                    break;
-                  
-                  case 'error':
-                    setStreamingError(data.message);
-                    break;
-                }
-              } catch (parseError) {
-                console.error('Error parsing SSE data:', parseError);
-              }
-            }
-          }
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
+          events.forEach(processEvent);
         }
       } finally {
         reader.releaseLock();
       }
 
       setIsStreaming(false);
-      console.log('Returning final result:', finalResult);
-      return finalResult;
+      const resolvedResult = finalResult || fallbackResult;
+      console.log('Returning final result:', resolvedResult);
+      return resolvedResult;
 
     } catch (error) {
       console.error('Streaming analysis error:', error);
       setStreamingError(error.message || 'Streaming analysis failed');
       setIsStreaming(false);
       return null;
-    }  }, [sessionId, onAnalysisUpdate]);
+    }
+  }, [sessionId, onAnalysisUpdate]);
   // Reset streaming state
   const resetStreamingState = useCallback(() => {
     setIsStreaming(false);
     setStreamingProgress(0);
     setStreamingStep('');
     setStreamingError(null);
-    setPartialResults({});
+    setPartialResults(null);
     setLastReceivedComponent(null);
     setComponentsReceived([]);
     disconnectWebSocket();
@@ -218,12 +252,10 @@ export const useStreamingAnalysis = (sessionId, onAnalysisUpdate) => {
   useEffect(() => {
     return () => {
       disconnectWebSocket();
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
     };
-  }, [disconnectWebSocket]);  return {
+  }, [disconnectWebSocket]);
+
+  return {
     isStreaming,
     streamingProgress,
     streamingStep,

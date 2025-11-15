@@ -39,6 +39,12 @@ from backend.services.quantitative_metrics_service import QuantitativeMetricsSer
 logger = logging.getLogger(__name__)
 
 
+# Backward-compat alias for older name used in this module
+# Some older code referenced _sanitize_for_logging; map it to the current utility
+def _sanitize_for_logging(data, max_length: int = 100):
+    return sanitize_for_logging(data, max_length=max_length)
+
+
 def _build_generate_url(model: str) -> str:
     return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
 
@@ -341,7 +347,8 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
                         }
                     }
                 ]
-            }],            "generationConfig": {
+            }],
+            "generationConfig": {
                 "temperature": 0.7,
                 "topK": 1,
                 "topP": 1,
@@ -370,8 +377,7 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
         else:
             logger.error(f"Gemini API error: {response.status_code}")
             return create_fallback_response(f"Gemini API error: {response.status_code}", "API request failed")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
-            
+
     except Exception as e:
         logger.error(f"Exception in query_gemini_with_audio: {type(e).__name__}", exc_info=True)
         return {"error": f"Gemini audio analysis error: {str(e)}"}
@@ -511,7 +517,8 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
 
     headers = {"Content-Type": "application/json"}
     payload = {
-        "contents": [{"parts": [{"text": full_prompt}]}],        "generationConfig": {
+        "contents": [{"parts": [{"text": full_prompt}]}],
+        "generationConfig": {
             "temperature": 0.7,
             "topK": 1,
             "topP": 1,
@@ -538,10 +545,9 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
         else:
             logger.error(f"Gemini API error: {response.status_code}")
             return create_fallback_response(f"Gemini API error: {response.status_code}", "API request failed")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", "API error occurred")
     except Exception as e:
         logger.error(f"Exception in query_gemini: {type(e).__name__}", exc_info=True)
-        return create_fallback_response(f"Gemini request error", "API request failed")
+        return create_fallback_response("Gemini request error", "API request failed")
 
 def validate_and_structure_gemini_response(raw_response: Dict[str, Any], transcript: str) -> Dict[str, Any]:
     # check if raw_response is valid json
@@ -552,7 +558,8 @@ def validate_and_structure_gemini_response(raw_response: Dict[str, Any], transcr
     if 'error' in raw_response:
         logger.error(f"Error in raw_response: {_sanitize_for_logging(raw_response['error'])}")
         return {"error": raw_response['error']}
-    print("raw_response", _sanitize_for_logging(raw_response))    # Define default structure to avoid KeyError when accessing raw_response[field]
+    print("raw_response", _sanitize_for_logging(raw_response))
+    # Define default structure to avoid KeyError when accessing raw_response[field]
     default_structure = {
         'speaker_transcripts': {"Speaker 1": "No transcript available"},
         'red_flags_per_speaker': {"Speaker 1": []},
@@ -663,7 +670,8 @@ def validate_and_structure_gemini_response(raw_response: Dict[str, Any], transcr
         },
         'overall_risk': "medium",   
         'extra': {}
-    }    # Check for top-level fields - only use defaults for truly missing critical fields
+    }
+    # Check for top-level fields - only use defaults for truly missing critical fields
     validated_response = {}
     
     # Critical fields that must have values
@@ -976,7 +984,8 @@ def transcribe_with_gemini(audio_path: str) -> str:
                 "temperature": 0.1,  # Low temperature for accurate transcription
                 "topK": 1,
                 "topP": 1,
-                "maxOutputTokens": 2048            }
+                "maxOutputTokens": 2048
+            }
         }
 
         logger.info(f"Sending transcription request to Gemini for {len(audio_data)} bytes of audio data")
@@ -1003,9 +1012,6 @@ def transcribe_with_gemini(audio_path: str) -> str:
                 raise Exception(f"No transcription content received from Gemini. Reason: {block_reason_message}")
             
             logger.info(f"Successfully transcribed audio: {_sanitize_for_logging(transcript)}")
-                raise Exception(f"No transcription content received from Gemini. Reason: {block_reason_message}")
-            
-            logger.info(f"Successfully transcribed audio""
             return transcript
             
         else:
@@ -1112,7 +1118,8 @@ def analyze_emotions_with_gemini(audio_path: str, transcript: str) -> list:
             
             if not text:
                 logger.warning("Failed to extract text from Gemini emotion response")
-                return [{"label": "neutral", "score": 0.7}, {"label": "uncertainty", "score": 0.3}]            # Use centralized JSON parsing
+                return [{"label": "neutral", "score": 0.7}, {"label": "uncertainty", "score": 0.3}]
+            
             result = safe_json_parse(text)
             
             # Check if result is an error dict
@@ -1391,14 +1398,6 @@ async def full_audio_analysis_pipeline(
         if isinstance(value, Exception):
             logger.error(f"Error in analysis task '{key}': {value}", exc_info=value)
             results[key] = None
-    gathered_results = await asyncio.gather(*analysis_tasks.values(), return_exceptions=True)
-    
-    result_keys = list(analysis_tasks.keys())
-    for i, key in enumerate(result_keys):
-        if isinstance(gathered_results[i], Exception):
-            logger.error(f"Error in analysis task '{key}': {type(gathered_results[i]).__name__}", exc_info=gathered_results[i])
-            # Fallback to None or default model instance (services should handle this internally)
-            results[key] = None # Or a default object if known
         else:
             results[key] = value
 

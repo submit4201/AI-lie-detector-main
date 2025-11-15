@@ -45,6 +45,82 @@ const SummaryItem = ({ itemKey, value }) => (
   </p>
 );
 
+const MetricBadge = ({ label, value, suffix = '' }) => (
+  <div className="bg-black/30 backdrop-blur-sm border border-white/10 rounded-lg p-3">
+    <p className="text-xs uppercase tracking-widest text-gray-400">{label}</p>
+    <p className="text-xl font-semibold text-white mt-1">
+      {value !== undefined && value !== null && value !== '' ? `${value}${suffix}` : 'N/A'}
+    </p>
+  </div>
+);
+
+const QuantitativeMetricsPanel = ({ data, isStreaming, highlight }) => {
+  if (!data) return null;
+  const linguistic = data?.local?.numerical_linguistic_metrics || {};
+  const interaction = data?.gemini?.interaction_metrics || {};
+  const sentimentTrend = Array.isArray(interaction.sentiment_trend) ? interaction.sentiment_trend : [];
+
+  return (
+    <div className={`animate-slideInFromLeft bg-gray-800/50 border border-gray-600/30 rounded-lg p-4 streaming-component ${highlight ? 'just-received' : ''}`}>
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-2 h-2 bg-cyan-400 rounded-full animate-pulse"></div>
+        <h3 className="text-lg font-semibold text-white">Quantitative Interaction Metrics</h3>
+        {isStreaming && highlight && (
+          <span className="component-received-badge">• Just received</span>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <MetricBadge label="Word Count" value={linguistic.word_count} />
+        <MetricBadge label="Unique Words" value={linguistic.unique_word_count} />
+        <MetricBadge label="Speech Rate" value={linguistic.speech_rate_wpm} suffix=" WPM" />
+        <MetricBadge label="Filler Words" value={linguistic.filler_word_count} />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+          <h4 className="text-sm uppercase tracking-wide text-cyan-300 mb-2">Interaction Sentiment</h4>
+          <p className="text-white text-xl font-semibold mb-1">{interaction.overall_sentiment_label || 'Unknown'}</p>
+          <p className="text-gray-300 text-sm mb-2">
+            Score: {interaction.overall_sentiment_score ?? 'N/A'} • Confidence: {interaction.sentiment_confidence ?? 'N/A'}
+          </p>
+          {sentimentTrend.length > 0 && (
+            <div className="text-gray-300 text-sm space-y-1 max-h-24 overflow-auto">
+              {sentimentTrend.slice(0, 3).map((entry, index) => (
+                <div key={`${entry.segment || index}-${entry.sentiment_label || entry.sentiment_score || index}`} className="flex items-center justify-between text-xs bg-black/30 rounded px-2 py-1">
+                  <span>{entry.segment || `Segment ${index + 1}`}</span>
+                  <span className="text-cyan-200 font-medium">
+                    {entry.sentiment_label || entry.sentiment_score || 'n/a'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="bg-black/20 rounded-lg p-4 border border-white/10">
+          <h4 className="text-sm uppercase tracking-wide text-cyan-300 mb-2">Engagement Signals</h4>
+          <ul className="text-gray-300 text-sm space-y-2">
+            <li>Question Ratio: {interaction.question_to_statement_ratio ?? 'N/A'}</li>
+            <li>Energy Score: {interaction.conversation_energy_score ?? 'N/A'}</li>
+            <li>Engagement Level: {interaction.engagement_level || 'N/A'}</li>
+            {Array.isArray(interaction.notable_interaction_events) && interaction.notable_interaction_events.length > 0 && (
+              <li>
+                Notable Events:
+                <ul className="list-disc ml-5 mt-1 space-y-1">
+                  {interaction.notable_interaction_events.slice(0, 3).map((event, idx) => (
+                    <li key={`${event}-${idx}`} className="text-gray-400">{event}</li>
+                  ))}
+                </ul>
+              </li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ResultsDisplay = ({ 
   analysisResults, 
   isLoading, 
@@ -69,6 +145,20 @@ const ResultsDisplay = ({
   console.log('isLoading:', isLoading);
   console.log('error:', error);
   console.log('=== End Debug ===');
+
+  const currentResults = isStreaming ? partialResults : analysisResults;
+  const serviceResults = currentResults?.services || {};
+  const transcriptPayload = currentResults?.transcript;
+  const transcriptText = typeof transcriptPayload === 'string'
+    ? transcriptPayload
+    : transcriptPayload?.transcript;
+  const transcriptAvailable = Boolean(transcriptText && transcriptText.trim().length > 0);
+  const hasServiceResults = Object.keys(serviceResults).length > 0;
+  const legacyKeysPresent = currentResults
+    ? Object.keys(currentResults).some(key => !['services', 'errors', 'meta'].includes(key) && currentResults[key])
+    : false;
+  const hasResults = transcriptAvailable || hasServiceResults || legacyKeysPresent;
+  const quantitativeMetrics = serviceResults.quantitative_metrics;
 
   if (error) {
     return (
@@ -104,12 +194,7 @@ const ResultsDisplay = ({
     );
   }
   // Show partial results during streaming OR when streaming is complete
-  if ((isStreaming && partialResults && Object.keys(partialResults).length > 0) || 
-      (!isStreaming && analysisResults)) {
-    
-    // Use partialResults during streaming, analysisResults when complete
-    const currentResults = isStreaming ? partialResults : analysisResults;
-    const hasResults = currentResults && Object.keys(currentResults).length > 0;
+  if ((isStreaming && partialResults) || (!isStreaming && analysisResults)) {
     
     if (!hasResults) {
       return (
@@ -131,7 +216,7 @@ const ResultsDisplay = ({
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-blue-400 rounded-full animate-pulse"></div>
               <span className="text-blue-200 font-medium">
-                Real-time Analysis • {Object.keys(currentResults).length} components received
+                Real-time Analysis • { (transcriptAvailable ? 1 : 0) + Object.keys(serviceResults).length } components received
               </span>
             </div>
             {streamingProgress && (
@@ -155,7 +240,12 @@ const ResultsDisplay = ({
             {/* Show Key Highlights as soon as any data is available */}
             {hasResults && (
               <div className="animate-fadeIn">
-                <KeyHighlightsSection analysisResults={currentResults} />
+                <KeyHighlightsSection
+                  result={currentResults}
+                  services={serviceResults}
+                  getCredibilityColor={getCredibilityColor}
+                  getCredibilityLabel={getCredibilityLabel}
+                />
               </div>
             )}
 
@@ -180,7 +270,7 @@ const ResultsDisplay = ({
             )}
 
             {/* Transcript */}
-            {currentResults.transcript && (
+            {transcriptAvailable && (
               <div className={`animate-slideInFromLeft bg-gray-800/50 border border-gray-600/30 rounded-lg p-4 streaming-component ${lastReceivedComponent === 'transcript' ? 'just-received' : ''}`}>
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -188,10 +278,19 @@ const ResultsDisplay = ({
                   {isStreaming && lastReceivedComponent === 'transcript' && (
                     <span className="component-received-badge">• Just received</span>
                   )}
-                </div>                <div className="text-gray-300 bg-black/20 p-3 rounded border-l-4 border-green-400">
-                  <p>"{currentResults.transcript?.transcript || currentResults.transcript}"</p>
+                </div>
+                <div className="text-gray-300 bg-black/20 p-3 rounded border-l-4 border-green-400">
+                  <p>"{transcriptText}"</p>
                 </div>
               </div>
+            )}
+
+            {quantitativeMetrics && (
+              <QuantitativeMetricsPanel
+                data={quantitativeMetrics}
+                isStreaming={isStreaming}
+                highlight={lastReceivedComponent === 'quantitative_metrics'}
+              />
             )}
 
             {/* Emotion Analysis */}
@@ -237,7 +336,10 @@ const ResultsDisplay = ({
             {/* Main Gemini Analysis */}
             {currentResults.gemini_analysis && (
               <div className={`animate-slideInFromLeft ${lastReceivedComponent === 'gemini_analysis' ? 'just-received' : ''}`}>
-                <ComprehensiveAnalysisSection analysisResults={currentResults} />
+                <ComprehensiveAnalysisSection
+                  analysisResults={currentResults}
+                  services={serviceResults}
+                />
               </div>
             )}
 
@@ -341,6 +443,7 @@ const ResultsDisplay = ({
       <ErrorBoundary fallback="Error loading highlights">
         <KeyHighlightsSection 
           result={analysisResults}
+          services={analysisResults?.services}
           getCredibilityColor={getCredibilityColor}
           getCredibilityLabel={getCredibilityLabel}
         />
@@ -350,6 +453,7 @@ const ResultsDisplay = ({
       <ErrorBoundary fallback="Error loading comprehensive analysis">
         <ComprehensiveAnalysisSection 
           result={analysisResults}
+          services={analysisResults?.services}
           fillerWordFrequencyText={fillerWordFrequencyText}
         />
       </ErrorBoundary>      {/* Session Insights Section - Only show if session data is available */}
