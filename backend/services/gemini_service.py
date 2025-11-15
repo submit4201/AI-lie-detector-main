@@ -28,27 +28,8 @@ from backend.services.conversation_flow_service import ConversationFlowService
 
 logger = logging.getLogger(__name__)
 
-# Security: Utility function to sanitize sensitive data in logs
-def _sanitize_for_logging(data: Any, max_length: int = 50) -> str:
-    """
-    Sanitize sensitive data for logging purposes.
-    Returns a safe string representation without exposing sensitive content.
-    """
-    if data is None:
-        return "None"
-    
-    data_type = type(data).__name__
-    
-    if isinstance(data, str):
-        if len(data) > max_length:
-            return f"<{data_type}: {len(data)} chars (truncated for security)>"
-        return f"<{data_type}: {len(data)} chars>"
-    elif isinstance(data, (dict, list)):
-        return f"<{data_type}: {len(data)} items>"
-    elif isinstance(data, bytes):
-        return f"<bytes: {len(data)} bytes>"
-    else:
-        return f"<{data_type}>"
+# Security: Import sanitization function from logging_utils to avoid circular imports
+from backend.services.logging_utils import sanitize_for_logging as _sanitize_for_logging
 
 # Define GeminiService class
 class GeminiService:

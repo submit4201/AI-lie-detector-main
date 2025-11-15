@@ -10,6 +10,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Import sanitization function for secure logging
+from backend.services.logging_utils import sanitize_for_logging as _sanitize_for_logging
+
 class EnhancedUnderstandingService:
     def __init__(self, gemini_service: Optional["GeminiService"] = None): # Added Optional and default
         if gemini_service is None:
@@ -19,7 +22,7 @@ class EnhancedUnderstandingService:
         self.gemini_service = gemini_service
 
     def _fallback_analysis(self, transcript_snippet: str) -> EnhancedUnderstanding:
-        logger.warning(f"EnhancedUnderstandingService: LLM call failed or returned malformed data for transcript snippet: {transcript_snippet}. Falling back to default.")
+        logger.warning(f"EnhancedUnderstandingService: LLM call failed or returned malformed data. Falling back to default.")
         # Ensure fallback returns all fields expected by EnhancedUnderstanding
         return EnhancedUnderstanding(
             key_topics=[],
@@ -44,7 +47,7 @@ class EnhancedUnderstandingService:
         Performs enhanced understanding analysis on the given transcript using an LLM.
         """
         transcript_snippet = transcript[:500]
-        logger.info(f"Performing enhanced understanding analysis for transcript snippet: {transcript_snippet}...")
+        logger.info(f"Performing enhanced understanding analysis for transcript: {_sanitize_for_logging(transcript_snippet)}")
 
         prompt = f"""
 Analyze the following transcript for enhanced understanding.
@@ -115,13 +118,13 @@ Focus your analysis solely on the provided transcript and session context.
                     deep_dive_analysis=data.get("deep_dive_analysis", "Analysis not available.")
                 )
             else:
-                logger.warning(f"EnhancedUnderstandingService: Received no response from LLM for transcript snippet: {transcript_snippet}.")
+                logger.warning(f"EnhancedUnderstandingService: Received no response from LLM")
                 return self._fallback_analysis(transcript_snippet)
         except (json.JSONDecodeError, TypeError) as e: # Keep Exception for broader unexpected issues
-            logger.error(f"EnhancedUnderstandingService: Error processing LLM response for transcript snippet: {transcript_snippet}. Error: {e}")
+            logger.error(f"EnhancedUnderstandingService: Error processing LLM response. Error: {type(e).__name__}")
             return self._fallback_analysis(transcript_snippet)
         except Exception as e:
-            logger.error(f"EnhancedUnderstandingService: Unexpected error during analysis for transcript snippet: {transcript_snippet}. Error: {e}")
+            logger.error(f"EnhancedUnderstandingService: Unexpected error during analysis. Error: {type(e).__name__}")
             return self._fallback_analysis(transcript_snippet)
 
 # enhanced_understanding_service = EnhancedUnderstandingService() # Commented out global instantiation
