@@ -25,6 +25,7 @@ from backend.services.streaming_service import analysis_streamer, stream_analysi
 from backend.services.v2_services.gemini_client import GeminiClientV2
 from backend.services.v2_services.runner import V2AnalysisRunner
 from backend.services.v2_services.streaming import stream_runner_events
+from backend.services.log_sanitizer import sanitize_error_message
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -177,27 +178,36 @@ async def stream_analyze_audio(
         # Get session context for the streaming pipeline
         session_context_data = conversation_history_service.get_session_context(current_session_id)
 
-        # Return streaming response
+        def cleanup_and_stream(temp_audio_path, session_id, session_context_data):
+            try:
+                yield from stream_analysis_pipeline(temp_audio_path, session_id, session_context_data)
+            finally:
+                if temp_audio_path and os.path.exists(temp_audio_path):
+                    try:
+                        os.unlink(temp_audio_path)
+                    except Exception as unlink_e:
+                        logger.error(f"Error unlinking temp file after streaming: {unlink_e}")
+
         return StreamingResponse(
-            stream_analysis_pipeline(temp_audio_path, current_session_id, session_context_data),
+            cleanup_and_stream(temp_audio_path, current_session_id, session_context_data),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
                 "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
             }
         )
         
     except Exception as e:
-        logger.error(f"Error in streaming analysis: {e}")
+        logger.error(f"Error in streaming analysis: {sanitize_error_message(e)}")
         # Clean up temp file on error
         if temp_audio_path and os.path.exists(temp_audio_path):
             try:
                 os.unlink(temp_audio_path)
             except Exception as unlink_e:
-                logger.error(f"Error unlinking temp file during streaming error handling: {unlink_e}")
-        raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
+                logger.error(f"Error unlinking temp file during streaming error handling")
+        raise HTTPException(status_code=500, detail="Analysis error occurred")
 
 @router.post(
     "/analyze",

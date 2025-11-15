@@ -10,6 +10,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Import sanitization function for secure logging
+from backend.services.logging_utils import sanitize_for_logging as _sanitize_for_logging
+
 class ArgumentService:
     def __init__(self, gemini_service: Optional["GeminiService"] = None):
         if gemini_service is None:
@@ -73,7 +76,7 @@ Focus your analysis solely on the provided transcript and session context.
             return self._fallback_text_analysis(transcript)
 
     def _fallback_text_analysis(self, transcript: str) -> ArgumentAnalysis:
-        logger.info(f"Performing fallback argument analysis for transcript snippet: {transcript[:100]}...")
+        logger.info(f"Performing fallback argument analysis for transcript: {_sanitize_for_logging(transcript)}")
         key_args: List[Dict[str, str]] = []
         fallacies: List[str] = []
         summary = "No clear arguments identified by fallback analysis."
