@@ -151,3 +151,13 @@ frontend/node_modules/
 .venv/
 .venv_old/
 .github/
+
+# Test artifacts and generated files
+tests/generated_files/*.json
+tests/*.wav
+tests/*.mp3
+model_alignment_test_results.json
+rest_api_structure_response.json
+streaming_api_events_structure.json
+test_*.wav
+test_*.mp3
