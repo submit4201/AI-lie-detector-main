@@ -25,15 +25,30 @@ Dependencies are managed separately for the backend and frontend.
 </dependencies_and_installation>
 
 <testing_instructions>
-The repository utilizes a `master_test_runner.py` script located in the `tests/` directory to manage and execute tests.
+The repository utilizes pytest for running tests. Tests are organized in the `tests/` directory with markers for different test types.
 
--   **Running All Tests**: To run the entire test suite, execute `python tests/master_test_runner.py` from the root of the repository.
--   **Running Specific Test Categories**: The `master_test_runner.py` organizes tests into categories (e.g., `backend_validation`, `api_tests`, `service_tests`, `analysis_tests`, `session_tests`, `streaming_tests`). You can run a specific category by providing its name as an argument: `python tests/master_test_runner.py <category_name>`.
--   **Listing Test Categories**: To see a list of available test categories, run `python tests/master_test_runner.py --list`.
+-   **Test Markers**:
+    *   `unit` (default): Fast tests with no external dependencies
+    *   `integration`: Tests requiring server/resources; skipped by default
+    *   `slow`: Long-running tests; skipped by default
+    
+-   **Running Tests**:
+    *   Run unit tests only: `pytest -q` or `pytest tests/`
+    *   Run integration tests: `pytest -q -m integration`
+    *   Run all tests: `pytest -q -m "integration or slow"`
+    *   Run specific test file: `pytest tests/test_direct_patterns.py -v`
+    *   Collect tests without running: `pytest --collect-only`
+
+-   **Test Organization** (see tests/README.md for full legend):
+    *   Unit tests: test_default_structure.py, test_direct_patterns.py, test_linguistic_service_pytest.py, test_session_utils.py
+    *   Integration tests: test_api.py, test_api_structure.py, test_complete_integration.py, test_streaming_*.py
+    *   Legacy/archived tests: Located in tests/archived/ folder
+
 -   **Test Frameworks**:
-    *   Backend tests (Python) appear to use standard Python testing practices, likely leveraging `unittest` or `pytest` implicitly, as indicated by the structure of the test files.
-    *   Frontend tests (React) are not explicitly defined with a specific testing framework in `package.json`, but the `eslint` configuration suggests a focus on code quality.
--   **Test Scope**: Tests cover various aspects, including backend API functionality, individual service logic, data flow, session management, and streaming capabilities.
+    *   Backend tests (Python) use `pytest` with fixtures defined in `tests/conftest.py`
+    *   Frontend tests (React) are not explicitly defined with a testing framework yet
+
+-   **Test Scope**: Tests cover backend API functionality, linguistic analysis, data structure validation, session management, and streaming capabilities.
 </testing_instructions>
 
 <pull_request_formatting>
