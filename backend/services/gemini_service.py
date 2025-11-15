@@ -10,6 +10,7 @@ import json # Ensure json is imported for JSONDecodeError
 
 from backend.config import GEMINI_API_KEY
 from backend.services.json_utils import parse_gemini_response, safe_json_parse, create_fallback_response, extract_text_from_gemini_response
+from backend.services.log_sanitizer import sanitize_for_logging, sanitize_error_message, sanitize_api_response
 
 from backend.models import (
     ManipulationAssessment, ArgumentAnalysis, SpeakerAttitude, EnhancedUnderstanding,
@@ -301,8 +302,8 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
             
             return result
         else:
-            logger.error(f"Gemini API error: {response.status_code} - {response.text}")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", response.text)
+            logger.error(f"Gemini API error: {response.status_code}")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "")
             
     except Exception as e:
         logger.error(f"Exception in query_gemini_with_audio: {str(e)}", exc_info=True)
@@ -454,7 +455,7 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
         response = requests.post(gemini_api_url, headers=headers, data=json.dumps(payload))
         if response.status_code == 200:
             gemini_response = response.json()
-            logger.info(f"Gemini API response structure: {json.dumps(gemini_response, indent=2)[:500]}...")
+            logger.info(f"Gemini API response received with {len(gemini_response.get('candidates', []))} candidates")
 
             # Use centralized JSON parsing
             result = parse_gemini_response(gemini_response, allow_partial=True)
@@ -467,11 +468,11 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
             
             return result
         else:
-            logger.error(f"Gemini API error: {response.status_code} - {response.text}")
-            return create_fallback_response(f"Gemini API error: {response.status_code}", response.text)
+            logger.error(f"Gemini API error: {response.status_code}")
+            return create_fallback_response(f"Gemini API error: {response.status_code}", "")
     except Exception as e:
-        logger.error(f"Exception in query_gemini: {str(e)}", exc_info=True)
-        return create_fallback_response(f"Gemini request error: {str(e)}", str(e))
+        logger.error(f"Exception in query_gemini: {sanitize_error_message(e)}")
+        return create_fallback_response(f"Gemini request error", "")
 
 def validate_and_structure_gemini_response(raw_response: Dict[str, Any], transcript: str) -> Dict[str, Any]:
     # check if raw_response is valid json
@@ -480,9 +481,9 @@ def validate_and_structure_gemini_response(raw_response: Dict[str, Any], transcr
         return {"error": "Invalid raw_response type"}
     # check if raw_response contains an error
     if 'error' in raw_response:
-        logger.error(f"Error in raw_response: {raw_response['error']}")
-        return {"error": raw_response['error']}
-    print("raw_response", raw_response)    # Define default structure to avoid KeyError when accessing raw_response[field]
+        logger.error(f"Error in raw_response")
+        return {"error": raw_response.get('error', 'Unknown error')}
+    # Note: print statement removed as it logs sensitive data    # Define default structure to avoid KeyError when accessing raw_response[field]
     default_structure = {
         'speaker_transcripts': {"Speaker 1": "No transcript available"},
         'red_flags_per_speaker': {"Speaker 1": []},
@@ -925,22 +926,22 @@ def transcribe_with_gemini(audio_path: str) -> str:
                     block_reason_message = gemini_response['promptFeedback']['blockReason']
                 elif 'promptFeedback' in gemini_response and 'safetyRatings' in gemini_response['promptFeedback']:
                     safety_ratings = gemini_response['promptFeedback']['safetyRatings']
-                    logger.warning(f"No transcript extracted, found safetyRatings: {json.dumps(safety_ratings)}")
-                    block_reason_message = f"Content may have been filtered due to safety ratings: {json.dumps(safety_ratings)}"
+                    logger.warning(f"No transcript extracted, found {len(safety_ratings)} safety ratings")
+                    block_reason_message = f"Content may have been filtered due to safety ratings"
                 
-                logger.error(f"Failed to extract transcript from Gemini response. Reason: {block_reason_message}. Full response: {json.dumps(gemini_response)}")
+                logger.error(f"Failed to extract transcript from Gemini response. Reason: {block_reason_message}")
                 raise Exception(f"No transcription content received from Gemini. Reason: {block_reason_message}")
             
-            logger.info(f"Successfully transcribed audio: \"{transcript[:100]}...\"")
+            logger.info(f"Successfully transcribed audio: {len(transcript)} characters")
             return transcript
             
         else:
-            logger.error(f"Gemini transcription API error: {response.status_code} - {response.text}")
+            logger.error(f"Gemini transcription API error: {response.status_code}")
             raise Exception(f"Gemini transcription API error: {response.status_code}")
             
     except Exception as e:
-        logger.error(f"Exception in transcribe_with_gemini: {str(e)}", exc_info=True)
-        raise Exception(f"Gemini transcription error: {str(e)}")
+        logger.error(f"Exception in transcribe_with_gemini: {sanitize_error_message(e)}")
+        raise Exception(f"Gemini transcription error: {type(e).__name__}")
 
 
 def analyze_emotions_with_gemini(audio_path: str, transcript: str) -> list:
@@ -1076,11 +1077,11 @@ def analyze_emotions_with_gemini(audio_path: str, transcript: str) -> list:
                 return [{"label": "neutral", "score": 0.6}, {"label": "uncertainty", "score": 0.4}]
             
         else:
-            logger.error(f"Gemini emotion API error: {response.status_code} - {response.text}")
+            logger.error(f"Gemini emotion API error: {response.status_code}")
             return [{"label": "neutral", "score": 0.7}, {"label": "uncertainty", "score": 0.3}]
             
     except Exception as e:
-        logger.error(f"Exception in analyze_emotions_with_gemini: {str(e)}", exc_info=True)
+        logger.error(f"Exception in analyze_emotions_with_gemini: {sanitize_error_message(e)}")
         # Return default emotions on any exception
         return [
             {"label": "neutral", "score": 0.7},
@@ -1196,18 +1197,18 @@ def audio_analysis_gemini(audio_path: str, transcript: str, flags: Dict[str, Any
             result = parse_gemini_response(gemini_response, allow_partial=True)
             
             if result.get('error'):
-                logger.warning(f"Gemini audio analysis parsing failed: {result.get('error')}")
-                return get_fallback_audio_analysis(f"Parsing failed: {result.get('error')}")
+                logger.warning(f"Gemini audio analysis parsing failed")
+                return get_fallback_audio_analysis(f"Parsing failed")
             else:
                 logger.info("Successfully parsed Gemini audio analysis response")
                 return result
         else:
             logger.error(f"Gemini audio analysis API error: {response.status_code}")
-            return get_fallback_audio_analysis(f"Gemini API error: {response.status_code}")
+            return get_fallback_audio_analysis(f"Gemini API error")
             
     except Exception as e:
-        logger.error(f"Exception in audio_analysis_gemini: {str(e)}", exc_info=True)
-        return get_fallback_audio_analysis(f"Audio analysis exception: {str(e)}")
+        logger.error(f"Exception in audio_analysis_gemini: {sanitize_error_message(e)}")
+        return get_fallback_audio_analysis(f"Audio analysis exception")
 
 
 # Add necessary imports for the new pipeline

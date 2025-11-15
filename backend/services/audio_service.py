@@ -4,6 +4,8 @@ from pydub import AudioSegment
 from typing import List, Dict, Any
 import logging
 
+from backend.services.log_sanitizer import sanitize_for_logging
+
 # Remove speech recognition dependency and use Gemini directly
 # from services.gemini_service import transcribe_and_analyze_with_gemini  # Remove unused import
 
@@ -67,7 +69,7 @@ async def streaming_audio_analysis_pipeline(audio_path: str, session_id: str = N
         # Step 1: Transcription with Gemini (audio-based)
         logger.info("Starting audio transcription with Gemini")
         transcript = transcribe_with_gemini(wav_path)
-        logger.info(f"Transcription completed: {transcript[:100]}...")
+        logger.info(f"Transcription completed: {len(transcript)} characters")
         
         if session_id:
             await analysis_streamer.send_analysis_update(session_id, "transcript", {"transcript": transcript})
