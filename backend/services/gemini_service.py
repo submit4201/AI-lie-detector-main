@@ -72,7 +72,7 @@ class GeminiService:
                         logger.info("Successfully received and parsed JSON response from Gemini.")
                         return parsed_json
                     else:
-                        logger.error(f"Failed to parse JSON from Gemini response or parsed data is an error. Parsed: {parsed_json}. Raw text: {extracted_text[:200]}")
+                        logger.error(f"Failed to parse JSON from Gemini response or parsed data is an error")
                         return None 
                 elif (response_data.get('candidates') and
                       response_data['candidates'][0].get('content') and
@@ -85,27 +85,27 @@ class GeminiService:
                          logger.info("Successfully received direct JSON object from Gemini.")
                          return potential_json_obj
                     else:
-                        logger.error(f"Gemini response part was not a dict as expected for direct JSON. Part: {str(potential_json_obj)[:200]}")
+                        logger.error(f"Gemini response part was not a dict as expected for direct JSON")
                         return None
                 else:
-                    logger.error(f"Could not extract text or direct JSON from Gemini response. Full response: {str(response_data)[:500]}")
+                    logger.error(f"Could not extract text or direct JSON from Gemini response")
                     return None
 
             else:
-                logger.error(f"Gemini API request failed with status code {response.status_code}: {response.text}")
+                logger.error(f"Gemini API request failed with status code {response.status_code}")
                 return None
 
         except httpx.ReadTimeout:
             logger.error("Gemini API request timed out.")
             return None
         except httpx.RequestError as e:
-            logger.error(f"An error occurred while requesting Gemini API: {e}")
+            logger.error(f"An error occurred while requesting Gemini API: {sanitize_error_message(e)}")
             return None
         except json.JSONDecodeError as e:
-            logger.error(f"Failed to decode JSON from Gemini response: {e}. Response text: {response.text[:200] if 'response' in locals() else 'N/A'}")
+            logger.error(f"Failed to decode JSON from Gemini response")
             return None
         except Exception as e:
-            logger.error(f"An unexpected error occurred in query_gemini_for_raw_json: {e}", exc_info=True)
+            logger.error(f"An unexpected error occurred in query_gemini_for_raw_json: {sanitize_error_message(e)}")
             return None
 
 def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, Any], session_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -306,8 +306,8 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
             return create_fallback_response(f"Gemini API error: {response.status_code}", "")
             
     except Exception as e:
-        logger.error(f"Exception in query_gemini_with_audio: {str(e)}", exc_info=True)
-        return {"error": f"Gemini audio analysis error: {str(e)}"}
+        logger.error(f"Exception in query_gemini_with_audio: {sanitize_error_message(e)}")
+        return {"error": f"Gemini audio analysis error"}
 
 
 def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -1267,7 +1267,7 @@ class GeminiService:
             logger.warning("GeminiService.query_gemini_for_raw_json: Placeholder returning None. Implement actual API call.")
             return None # Services will use their fallbacks
         except Exception as e:
-            logger.error(f"GeminiService.query_gemini_for_raw_json error: {e}", exc_info=True)
+            logger.error(f"GeminiService.query_gemini_for_raw_json error: {sanitize_error_message(e)}")
             return None
 
 from backend.models import (
@@ -1314,9 +1314,9 @@ async def full_audio_analysis_pipeline(
         try:
             # Assuming transcribe_with_gemini is a synchronous function
             transcript_text = await loop.run_in_executor(None, transcribe_with_gemini, audio_path)
-            logger.info(f"Transcription successful: {transcript_text[:100]}...")
+            logger.info(f"Transcription successful: {len(transcript_text)} characters")
         except Exception as e:
-            logger.error(f"Transcription failed: {e}", exc_info=True)
+            logger.error(f"Transcription failed: {sanitize_error_message(e)}")
             transcript_text = "Transcription failed." # Fallback
 
     # Import locally to avoid circular import at module level
@@ -1342,7 +1342,7 @@ async def full_audio_analysis_pipeline(
     result_keys = list(analysis_tasks.keys())
     for i, key in enumerate(result_keys):
         if isinstance(gathered_results[i], Exception):
-            logger.error(f"Error in analysis task '{key}': {gathered_results[i]}", exc_info=gathered_results[i])
+            logger.error(f"Error in analysis task '{key}': {sanitize_error_message(gathered_results[i])}")
             # Fallback to None or default model instance (services should handle this internally)
             results[key] = None # Or a default object if known
         else:
