@@ -250,7 +250,7 @@ app.add_middleware(
 )
 
 emotion_classifier = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base", top_k=7, return_all_scores=True)
-gemini_api_key = os.getenv("GEMINI_API_KEY", "AIzaSyB5KbPaVXPYkUeShTEE82fgpZiLiLl7YyM")  # fallback key
+gemini_api_key = os.getenv("GEMINI_API_KEY", "")  # fallback key
 
 def query_gemini(transcript, flags, session_id: str = None):
     if not gemini_api_key:
