@@ -1,0 +1,206 @@
+[
+    {
+        "type": "progress",
+        "step": "audio_quality",
+        "progress": 1,
+        "total": 5
+    },
+    {
+        "type": "result",
+        "analysis_type": "audio_quality",
+        "data": {
+            "duration": 30.0,
+            "sample_rate": 48000,
+            "quality_score": 80
+        }
+    },
+    {
+        "type": "progress",
+        "step": "transcription",
+        "progress": 2,
+        "total": 5
+    },
+    {
+        "type": "result",
+        "analysis_type": "transcript",
+        "data": {
+            "transcript": "and he told me that um he was trying to figure some stuff out and um I asked him like what and he well I mean I'll never forget it he was smoking a cigarette and he was like really calm and he looked at me and he said what would you say if I said if I told you Laura was dead and I was like you know I was like what and basically he told me that um the night that Laura had come over to the house that she had died and that whenever I left that he just panicked and freaked out and I got I started freaking out and I was asking him why he didn't call the cops call for help like he told me he was going to and he told me that um he got scared that he was a black man with a dead white woman and nobody was gonna believe him that it was an accident."
+        }
+    },
+    {
+        "type": "progress",
+        "step": "gemini_analysis",
+        "progress": 3,
+        "total": 5
+    },
+    {
+        "type": "result",
+        "analysis_type": "gemini_analysis",
+        "data": {
+            "speaker_transcripts": {
+                "Speaker 1": "and he told me that um he was trying to figure some stuff out and um I asked him like what and he well I mean I'll never forget it he was smoking a cigarette and he was like really calm and he looked at me and he said what would you say if I said if I told you Laura was dead and I was like you know I was like what and basically he told me that um the night that Laura had come over to the house that she had died and that whenever I left that he just panicked and freaked out and I got I started freaking out and I was asking him why he didn't call the cops call for help like he told me he was going to and he told me that um he got scared that he was a black man with a dead white woman and nobody was gonna believe him that it was an accident."
+            },
+            "red_flags_per_speaker": {
+                "Speaker 1": [
+                    "Frequent use of filler words ('um'), suggesting hesitation and potential deception.",
+                    "Varied speaking rate; slower pace during emotionally charged parts ('Laura was dead'), potentially indicating stress and discomfort.",
+                    "Changes in pitch, particularly a rise in pitch during emotionally sensitive parts, indicative of stress or anxiety.",
+                    "Micro-pauses before and after crucial details, suggesting internal conflict or attempts to manage narrative.",
+                    "Voice quality shifts from relatively calm to more anxious, lacking complete consistency."
+                ]
+            },
+            "credibility_score": 60,
+            "confidence_level": "medium",
+            "gemini_summary": {
+                "tone": "The speaker's tone is generally calm, but punctuated by moments of increased pitch and vocal tension, particularly when recounting the events surrounding Laura's death.  This inconsistency suggests potential emotional distress or attempts to control the narrative.",
+                "motivation": "The speaker's motivation appears to be explaining the situation, but the vocal cues suggest potential underlying anxiety and a desire to portray a specific version of events.  The emphasis on the man's fear of disbelief hints at a possible attempt to justify his actions.",
+                "credibility": "The vocal inconsistencies and hesitation patterns raise questions about the speaker's complete authenticity. While the narrative flows, the vocal cues suggest a level of stress and discomfort that warrants further investigation.",
+                "emotional_state": "The speaker's emotional state appears inconsistent. While describing the man's calmness, the speaker displays significant vocal stress and emotional volatility, suggesting an internal conflict or lack of emotional control.",
+                "communication_style": "The speaker's communication style is characterized by frequent filler words ('um'), variable speaking rate, and pitch changes, suggesting a lack of complete composure and potential attempts to manage the narrative.",
+                "key_concerns": "The main vocal stress indicators are the frequent use of filler words, varying speaking rate, pitch changes, and micro-pauses around key details. These suggest potential deception or significant emotional distress.",
+                "strengths": "The speaker provides a detailed account of the events, including the man's explanation for his actions. The level of detail, while potentially crafted, is a strength in terms of narrative structure."
+            },
+            "recommendations": [
+                "Conduct a follow-up interview focusing on the inconsistencies identified in the initial statement.",
+                "Verify the speaker's account of events with independent sources and evidence."
+            ],
+            "linguistic_analysis": {
+                "speech_patterns": "The speech is characterized by frequent hesitations ('um'), variable pacing, and noticeable pauses, especially before and after key details. The rhythm is uneven, suggesting emotional involvement or potential manipulation.",
+                "word_choice": "The vocabulary is relatively simple, but the emotional weight assigned to certain words ('panicked', 'freaked out', 'scared') suggests a deep emotional response. This emotional intensity is not consistently reflected in the overall vocal delivery.",
+                "emotional_consistency": "The emotional consistency between vocal cues and the content of the narrative is low. The speaker's calm description of the man's calmness contrasts with their own demonstrable vocal stress.",
+                "detail_level": "The speaker provides details, but the frequent pauses and hesitations suggest potential uncertainty or deliberate withholding of information."
+            },
+            "risk_assessment": {
+                "overall_risk": "medium",
+                "risk_factors": [
+                    "Inconsistent vocal delivery indicating potential deception or significant emotional distress.",
+                    "Hesitation and filler words suggesting uncertainty or attempts to construct a narrative."
+                ],
+                "mitigation_suggestions": [
+                    "Independent verification of the speaker's account.",
+                    "Further questioning to clarify inconsistencies and address gaps in the narrative."
+                ]
+            },
+            "audio_analysis": {
+                "vocal_stress_indicators": "Frequent use of filler words, variable speaking rate, pitch variations, and micro-pauses around key details.",
+                "speaking_rate_variations": "The speaking rate fluctuates significantly, slowing down during emotionally charged segments and speeding up during less significant parts.",
+                "pitch_analysis": "The pitch rises noticeably during emotionally sensitive parts, suggesting stress or anxiety.  The overall pitch is relatively stable, but the variations are significant.",
+                "pause_patterns": "Significant pauses are observed before and after key details, such as the death of Laura and the man's fear of disbelief. These pauses suggest deliberateness or internal conflict.",
+                "voice_quality": "The voice quality is generally clear, but shifts from relatively calm to more anxious throughout the statement, indicating a lack of complete consistency and potential emotional manipulation."
+            },
+            "manipulation_assessment": {
+                "manipulation_score": 25,
+                "manipulation_tactics": [
+                    "Potential emotional manipulation by emphasizing the man's fear to elicit sympathy."
+                ],
+                "manipulation_explanation": "While not definitive evidence of manipulation, the speaker's emphasis on the man's fear and the potential for him to be disbelieved could be interpreted as an attempt to influence the listener's perception of the situation.",
+                "example_phrases": [
+                    "'he got scared that he was a black man with a dead white woman and nobody was gonna believe him that it was an accident'"
+                ]
+            },
+            "argument_analysis": {
+                "argument_strengths": [
+                    "The speaker provides a detailed account of the events, including the man's explanation for his actions."
+                ],
+                "argument_weaknesses": [
+                    "The account lacks independent corroboration and contains inconsistencies in vocal delivery that raise questions about its reliability."
+                ],
+                "overall_argument_coherence_score": 60
+            },
+            "speaker_attitude": {
+                "respect_level_score": 70,
+                "sarcasm_detected": false,
+                "sarcasm_confidence_score": 0,
+                "tone_indicators_respect_sarcasm": []
+            },
+            "enhanced_understanding": {
+                "key_inconsistencies": [
+                    "The discrepancy between the speaker's calm description of the man's demeanor and their own demonstrably stressed vocal delivery."
+                ],
+                "areas_of_evasiveness": [],
+                "suggested_follow_up_questions": [
+                    "Can you describe the man's demeanor in more detail, paying attention to specific nonverbal cues?",
+                    "Were there any other witnesses to the events that night?",
+                    "What specific actions did the man take after Laura's death, before you left?"
+                ],
+                "unverified_claims": [
+                    "The speaker's account of the man's explanation for not calling the police."
+                ]
+            }
+        }
+    },
+    {
+        "type": "progress",
+        "step": "emotion_analysis",
+        "progress": 4,
+        "total": 5
+    },
+    {
+        "type": "result",
+        "analysis_type": "emotion_analysis",
+        "data": [
+            {
+                "label": "sad",
+                "score": 0.8
+            },
+            {
+                "label": "fear",
+                "score": 0.7
+            },
+            {
+                "label": "surprise",
+                "score": 0.6
+            },
+            {
+                "label": "stress",
+                "score": 0.7
+            },
+            {
+                "label": "uncertainty",
+                "score": 0.6
+            },
+            {
+                "label": "nervousness",
+                "score": 0.5
+            },
+            {
+                "label": "sincerity",
+                "score": 0.7
+            }
+        ]
+    },
+    {
+        "type": "progress",
+        "step": "linguistic_analysis",
+        "progress": 5,
+        "total": 5
+    },
+    {
+        "type": "result",
+        "analysis_type": "linguistic_analysis",
+        "data": {
+            "word_count": 166,
+            "hesitation_count": 15,
+            "qualifier_count": 0,
+            "certainty_count": 2,
+            "filler_count": 4,
+            "repetition_count": 33,
+            "formality_score": 45.8,
+            "complexity_score": 1.9,
+            "avg_word_length": 3.5,
+            "avg_words_per_sentence": 166.0,
+            "sentence_count": 1,
+            "speech_rate_wpm": 332.0,
+            "hesitation_rate": 30.0,
+            "confidence_ratio": 1.0,
+            "speech_patterns": "Speaker demonstrates very rapid speech pace with high hesitation frequency and low linguistic complexity. Speech contains 15 hesitation markers across 166 words, suggesting some uncertainty or processing time.",
+            "word_choice": "Word choice reflects simple vocabulary in a formal register. Analysis reveals confident, definitive language patterns, with 0 qualifiers versus 2 certainty markers.",
+            "emotional_consistency": "Speaker demonstrates high emotional consistency with confident expression. Stress indicator analysis shows elevated levels based on 15 total uncertainty/hesitation markers, suggesting potential anxiety or deception concerns.",
+            "detail_level": "Response provides moderate detail level using complex, detailed sentence structures. Complexity score of 1.9/100 indicates simple communication style with average 166.0 words per sentence."
+        }
+    },
+    {
+        "type": "complete",
+        "message": "Analysis pipeline completed"
+    }
+]

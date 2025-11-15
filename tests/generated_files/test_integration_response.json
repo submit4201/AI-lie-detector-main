@@ -1,0 +1,130 @@
+{
+  "session_id": "a67039c5-73ab-42a2-8bef-5d150d6cc9b6",
+  "transcript": "\n    I was at the store yesterday buying groceries. Well, actually, I think it was two days ago. \n    No wait, it was definitely yesterday because I remember seeing my neighbor there. \n    I bought milk, bread, and some other stuff. The prices were, um, reasonable I guess. \n    I mean, everything is so expensive these days, you know? But I definitely had enough money \n    to pay for everything. I always do my shopping there because they have the best selection.\n    ",
+  "audio_quality": {
+    "duration": 0.0,
+    "sample_rate": 0,
+    "channels": 0,
+    "loudness": 0.0,
+    "quality_score": 0
+  },
+  "emotion_analysis": [],
+  "speaker_transcripts": {
+    "Speaker 1": "I was at the store yesterday buying groceries. Well, actually, I think it was two days ago. No wait, it was definitely yesterday because I remember seeing my neighbor there. I bought milk, bread, and some other stuff. The prices were, um, reasonable I guess. I mean, everything is so expensive these days, you know? But I definitely had enough money to pay for everything. I always do my shopping there because they have the best selection."
+  },
+  "red_flags_per_speaker": {
+    "Speaker 1": [
+      "Hesitations and uncertainty in recalling the day of the grocery shopping",
+      "Use of qualifiers and certainty markers suggesting potential deception",
+      "Vague description of 'some other stuff' lacking specific details"
+    ]
+  },
+  "credibility_score": 70,
+  "confidence_level": "medium",
+  "gemini_summary": {
+    "tone": "The speaker's tone appears somewhat hesitant and uncertain, with moments of defensiveness in clarifying the day of the shopping trip.  There's a noticeable attempt to project certainty.",
+    "motivation": "The underlying motivation is unclear. The speaker may be trying to convincingly recount a mundane event but inconsistencies raise suspicion.",
+    "credibility": "The credibility is moderate.  While the account is plausible on the surface, inconsistencies and hesitations cast doubt on the accuracy and completeness of the recollection.",
+    "emotional_state": "The speaker's emotional state is characterized by mild anxiety or stress, potentially stemming from the need to convincingly convey a specific narrative.",
+    "communication_style": "The communication style is informal, with some filler words and hesitations.  The speaker tends towards simple sentence structures and limited detail.",
+    "key_concerns": "The inconsistencies in recalling the date of the shopping trip and the vague description of the items purchased are significant concerns.",
+    "strengths": "The speaker provides a basic account of the event, and the overall narrative is plausible, although lacking in detail."
+  },
+  "recommendations": [
+    "Ask follow-up questions to clarify inconsistencies, such as the exact date and specific items purchased.",
+    "Compare the speaker's account with potential external evidence, such as store receipts or witness testimonies."
+  ],
+  "linguistic_analysis": {
+    "word_count": 77,
+    "hesitation_count": 6,
+    "qualifier_count": 2,
+    "certainty_count": 4,
+    "filler_count": 1,
+    "repetition_count": 1,
+    "formality_score": 50.0,
+    "complexity_score": 0.0,
+    "avg_word_length": 4.5,
+    "avg_words_per_sentence": 9.6,
+    "sentence_count": 8,
+    "speech_rate_wpm": null,
+    "hesitation_rate": null,
+    "confidence_ratio": 0.67,
+    "speech_patterns": "The speech pattern is characterized by frequent hesitations and a somewhat uneven pace, suggesting potential nervousness or uncertainty.",
+    "word_choice": "The word choice is simple and relatively informal, with some qualifiers and certainty markers used to strengthen claims.",
+    "emotional_consistency": "The speaker's emotional consistency is questionable, with moments of uncertainty and attempts to project certainty.",
+    "detail_level": "The level of detail provided is low, lacking specifics that would typically be easily recalled for a recent event."
+  },
+  "risk_assessment": {
+    "overall_risk": "low",
+    "risk_factors": [
+      "Inconsistencies in the account",
+      "Hesitations and qualifiers"
+    ],
+    "mitigation_suggestions": [
+      "Further questioning to clarify inconsistencies",
+      "Verification of the account through external means"
+    ]
+  },
+  "session_insights": null,
+  "manipulation_assessment": {
+    "manipulation_score": 10,
+    "manipulation_tactics": [],
+    "manipulation_explanation": "No overt manipulative tactics were detected. The inconsistencies might stem from memory lapses or attempts to appear consistent rather than intentional deception.",
+    "example_phrases": []
+  },
+  "argument_analysis": {
+    "argument_strengths": [
+      "The basic narrative of going to the store to buy groceries is plausible."
+    ],
+    "argument_weaknesses": [
+      "Lack of detail and inconsistencies in recalling the date weaken the overall account.",
+      "The use of qualifiers and repeated attempts to confirm the date raise suspicion."
+    ],
+    "overall_argument_coherence_score": 40
+  },
+  "speaker_attitude": {
+    "respect_level_score": 80,
+    "sarcasm_detected": false,
+    "sarcasm_confidence_score": 0,
+    "tone_indicators_respect_sarcasm": []
+  },
+  "enhanced_understanding": {
+    "key_inconsistencies": [
+      "Conflicting statements about the date of the grocery shopping trip"
+    ],
+    "areas_of_evasiveness": [
+      "The speaker provides vague details regarding the 'other stuff' purchased."
+    ],
+    "suggested_follow_up_questions": [
+      "Can you recall any specific details about the other items you purchased?",
+      "Can you describe anything else that happened at the store yesterday?"
+    ],
+    "unverified_claims": [
+      "The statement about the store having the 'best selection'"
+    ]
+  },
+  "quantitative_metrics": {
+    "word_count": 77,
+    "hesitation_count": 6,
+    "qualifier_count": 2,
+    "certainty_count": 4,
+    "filler_count": 1,
+    "repetition_count": 1,
+    "formality_score": 50.0,
+    "complexity_score": 0,
+    "avg_word_length": 4.5,
+    "avg_words_per_sentence": 9.6,
+    "sentence_count": 8,
+    "speech_rate_wpm": null,
+    "hesitation_rate": null,
+    "confidence_ratio": 0.67,
+    "speech_patterns": "Speaker demonstrates speech pace analysis pending with high hesitation frequency and low linguistic complexity. Speech contains 6 hesitation markers across 77 words, suggesting some uncertainty or processing time.",
+    "word_choice": "Word choice reflects moderate vocabulary in a formal register. Analysis reveals balanced use of certain and uncertain language, with 2 qualifiers versus 4 certainty markers.",
+    "emotional_consistency": "Speaker demonstrates moderate emotional consistency with some uncertainty. Stress indicator analysis shows moderate levels based on 8 total uncertainty/hesitation markers, suggesting normal communication patterns.",
+    "detail_level": "Response provides brief detail level using simple, direct sentence structures. Complexity score of 0.0/100 indicates simple communication style with average 9.6 words per sentence."
+  },
+  "audio_analysis": null,
+  "conversation_flow": null,
+  "behavioral_patterns": null,
+  "verification_suggestions": null
+}

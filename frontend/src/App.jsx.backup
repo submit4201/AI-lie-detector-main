@@ -1,0 +1,573 @@
+// Lie Detector App Frontend (React + Enhanced AI Analysis Display)
+
+import React, { useState, useRef } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { UploadCloud, Mic, Loader2, StopCircle, Download, Settings } from "lucide-react";
+
+export default function App() {
+  const [file, setFile] = useState(null);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [error, setError] = useState(null);
+  const [analysisProgress, setAnalysisProgress] = useState('');
+  const [audioValidation, setAudioValidation] = useState(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+
+  const getCredibilityColor = (score) => {
+    if (score >= 70) return '#4ade80' // green
+    if (score >= 40) return '#fbbf24' // yellow
+    return '#ef4444' // red
+  }
+
+  const getCredibilityLabel = (score) => {
+    if (score >= 70) return 'High Credibility'
+    if (score >= 40) return 'Moderate Credibility'
+    return 'Low Credibility'
+  }
+
+  // Enhanced parsing helper functions
+  const parseGeminiAnalysis = (analysis) => {
+    if (!analysis) return null;
+    
+    // If analysis is already an object, return it
+    if (typeof analysis === 'object' && !Array.isArray(analysis)) {
+      return analysis;
+    }
+    
+    // If it's a string, try to parse it
+    if (typeof analysis === 'string') {
+      try {
+        // Remove markdown code blocks if present
+        const cleanedAnalysis = analysis
+          .replace(/```json\s*/g, '')
+          .replace(/```\s*/g, '')
+          .trim();
+        
+        return JSON.parse(cleanedAnalysis);
+      } catch (error) {
+        console.warn('Failed to parse Gemini analysis:', error);
+        return { gemini_summary: analysis, error: 'Failed to parse structured response' };
+      }
+    }
+    
+    return null;
+  };
+
+  const formatConfidenceLevel = (score) => {
+    if (score >= 90) return { level: 'Very High', color: 'text-green-800', bgColor: 'bg-green-100' };
+    if (score >= 70) return { level: 'High', color: 'text-green-700', bgColor: 'bg-green-50' };
+    if (score >= 50) return { level: 'Moderate', color: 'text-yellow-700', bgColor: 'bg-yellow-50' };
+    if (score >= 30) return { level: 'Low', color: 'text-orange-700', bgColor: 'bg-orange-50' };
+    return { level: 'Very Low', color: 'text-red-700', bgColor: 'bg-red-50' };
+  };
+  // Audio file validation
+  const validateAudioFile = (file) => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['audio/wav', 'audio/mp3', 'audio/mpeg', 'audio/ogg', 'audio/webm'];
+    
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'Invalid file type. Please upload WAV, MP3, or OGG files.' };
+    }
+    
+    if (file.size > maxSize) {
+      return { valid: false, error: 'File too large. Maximum size is 10MB.' };
+    }
+    
+    return { valid: true };
+  };
+    
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'Invalid file type. Please upload WAV, MP3, or OGG files.' };
+    }
+    
+    if (file.size > maxSize) {
+      return { valid: false, error: 'File too large. Maximum size is 10MB.' };
+    }
+    
+    return { valid: true };
+  };
+  const handleUpload = async (uploadFile) => {
+    if (!uploadFile) {
+      setError("No file selected");
+      return;
+    }
+
+    // Validate audio file
+    const validation = validateAudioFile(uploadFile);
+    if (!validation.valid) {
+      setError(validation.error);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResult(null); // Clear previous results
+    setAnalysisProgress('Uploading audio file...');
+    
+    const formData = new FormData();
+    formData.append("audio", uploadFile);
+
+    try {
+      console.log("Sending request to backend...");
+      setAnalysisProgress('Processing audio and transcribing...');
+      
+      const res = await fetch("http://localhost:8000/analyze", {
+        method: "POST",
+        body: formData,
+      });
+      
+      console.log("Response status:", res.status);
+      setAnalysisProgress('Analyzing speech patterns...');
+      
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(`Server error (${res.status}): ${errorText}`);
+      }
+      
+      setAnalysisProgress('Running AI analysis...');
+      const data = await res.json();
+      console.log("Received data:", data);
+      setAnalysisProgress('Analysis complete!');
+      
+      setTimeout(() => {
+        setResult(data);
+        setAnalysisProgress('');
+      }, 500);
+      
+      if (data.error) {
+        setError(data.error);
+      }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError(`Upload failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const file = new File([audioBlob], "recording.wav", { type: "audio/wav" });
+        setFile(file);
+        handleUpload(file);
+        // Clean up the stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setRecording(true);
+    } catch (err) {
+      console.error(err);
+      setError("Microphone access denied or unavailable");
+    }
+  };
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    }
+  };
+  // Export functionality
+  const exportResults = () => {
+    if (!result) return;
+    
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      analysis: {
+        transcript: result.transcript,
+        emotion_analysis: result.emotion_analysis,
+        deception_flags: result.deception_flags,
+        gemini_analysis: result.gemini_analysis
+      }
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lie-detector-analysis-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `lie-detector-analysis-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="text-center">
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent mb-3">
+              🎙️ AI Lie Detector
+            </h1>
+            <p className="text-gray-300 text-lg">Advanced voice analysis with AI-powered deception detection</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Control Panel */}
+        <Card className="mb-8 bg-white/10 backdrop-blur-md border-white/20 shadow-2xl">
+          <CardContent className="p-8">
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col lg:flex-row gap-6">
+                <div className="flex-1">
+                  <label className="block text-white font-medium mb-3">Upload Audio File</label>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={(e) => setFile(e.target.files[0])}
+                    className="w-full border border-white/30 bg-white/10 backdrop-blur-sm text-white p-4 rounded-xl 
+                             file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-semibold 
+                             file:bg-gradient-to-r file:from-blue-500 file:to-purple-500 file:text-white 
+                             hover:file:from-blue-600 hover:file:to-purple-600 transition-all duration-300"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 flex-wrap">
+                <Button 
+                  onClick={() => handleUpload(file)} 
+                  disabled={loading || !file}
+                  className="flex-1 min-w-[200px] h-14 text-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-600 
+                           hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed
+                           shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="animate-spin mr-3 h-5 w-5" /> 
+                      <span>Analyzing Audio...</span>
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="mr-3 h-5 w-5" /> 
+                      <span>Analyze File</span>
+                    </>
+                  )}
+                </Button>
+
+                {!recording ? (
+                  <Button 
+                    onClick={startRecording} 
+                    variant="outline" 
+                    className="flex-1 min-w-[200px] h-14 text-lg font-semibold border-2 border-green-400 text-green-400 
+                             hover:bg-green-400 hover:text-white transition-all duration-300 shadow-lg hover:shadow-xl"
+                  >
+                    <Mic className="mr-3 h-5 w-5" /> 
+                    <span>Start Recording</span>
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={stopRecording} 
+                    variant="destructive" 
+                    className="flex-1 min-w-[200px] h-14 text-lg font-semibold bg-gradient-to-r from-red-500 to-pink-600 
+                             hover:from-red-600 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-300
+                             animate-pulse"
+                  >
+                    <StopCircle className="mr-3 h-5 w-5" /> 
+                    <span>Stop Recording</span>
+                  </Button>
+                )}
+              </div>
+
+              {error && (
+                <div className="bg-red-500/20 border border-red-400/50 backdrop-blur-sm rounded-xl p-4">
+                  <p className="text-red-200 font-medium flex items-center">
+                    <span className="mr-2">⚠️</span>
+                    {error}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {result && (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Left Column - Basic Analysis */}
+            <div className="xl:col-span-1 space-y-6">
+              {/* Transcript Section */}
+              {result.transcript && (
+                <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl">
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                      📝 <span className="ml-2">Transcript</span>
+                    </h2>
+                    <div className="bg-black/30 backdrop-blur-sm p-4 rounded-lg border-l-4 border-blue-400">
+                      <p className="text-gray-200 leading-relaxed italic">"{result.transcript}"</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Emotion Analysis Section */}
+              {result.emotion_analysis && result.emotion_analysis[0] && (
+                <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl">
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                      🎭 <span className="ml-2">Emotion Analysis</span>
+                    </h2>
+                    <div className="space-y-3">
+                      {result.emotion_analysis[0].map((emotion, i) => (
+                        <div key={i} className="bg-black/30 backdrop-blur-sm p-4 rounded-lg border border-white/10">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="font-semibold text-cyan-300 capitalize">{emotion.label}</span>
+                            <span className="text-lg font-bold text-white">{(emotion.score * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="w-full bg-gray-700 rounded-full h-3">
+                            <div 
+                              className="bg-gradient-to-r from-cyan-400 to-blue-500 h-3 rounded-full transition-all duration-1000"
+                              style={{width: `${emotion.score * 100}%`}}
+                            ></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Deception Flags Section */}
+              {result.deception_flags && (
+                <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-xl">
+                  <CardContent className="p-6">
+                    <h2 className="text-xl font-bold text-white mb-4 flex items-center">
+                      🚩 <span className="ml-2">Deception Indicators</span>
+                    </h2>
+                    {result.deception_flags.length > 0 ? (
+                      <div className="space-y-3">
+                        {result.deception_flags.map((flag, i) => (
+                          <div key={i} className="bg-red-500/20 border border-red-400/50 backdrop-blur-sm rounded-lg p-4 border-l-4 border-l-red-400">
+                            <div className="flex items-start">
+                              <span className="text-red-300 mr-2 mt-1">⚠️</span>
+                              <p className="text-red-200 text-sm leading-relaxed">{flag}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="bg-green-500/20 border border-green-400/50 backdrop-blur-sm rounded-lg p-4">
+                        <p className="text-green-200 text-center font-medium">✅ No red flags detected - High credibility indicators</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Right Column - AI Analysis */}
+            <div className="xl:col-span-2">
+              {result.gemini_analysis && (
+                <Card className="bg-white/10 backdrop-blur-md border-white/20 shadow-2xl h-full">
+                  <CardContent className="p-8">
+                    <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+                      🤖 <span className="ml-3">AI Deep Analysis</span>
+                    </h2>
+                  
+                    {result.gemini_analysis.error ? (
+                      <div className="bg-yellow-900/30 backdrop-blur-sm border border-yellow-400/50 p-4 rounded-lg">
+                        <p className="text-yellow-200 font-medium">⚠️ AI Analysis Error: {result.gemini_analysis.error}</p>
+                        {result.gemini_analysis.gemini_raw_response && (
+                          <details className="mt-3">
+                            <summary className="cursor-pointer text-sm text-yellow-300">View raw response</summary>
+                            <pre className="text-xs mt-2 p-2 bg-black/30 backdrop-blur-sm rounded overflow-auto max-h-40 text-gray-300">
+                              {JSON.stringify(result.gemini_analysis.gemini_raw_response, null, 2)}
+                            </pre>
+                          </details>
+                        )}
+                      </div>
+                    ) : (
+                      (() => {
+                        const parsedAnalysis = parseGeminiAnalysis(result.gemini_analysis);
+                        if (!parsedAnalysis) {
+                          return (
+                            <div className="bg-gray-900/30 backdrop-blur-sm border border-gray-400/30 p-4 rounded-lg">
+                              <p className="text-gray-300">No AI analysis data available</p>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-6">
+                            {/* Credibility Score */}
+                            {(typeof parsedAnalysis.credibility_score === 'number' || typeof result.gemini_analysis.credibility_score === 'number') && (
+                              <div className="bg-gradient-to-r from-indigo-900/30 to-purple-900/30 backdrop-blur-sm p-6 rounded-xl border border-indigo-400/30">
+                                <h3 className="text-lg font-semibold text-indigo-300 mb-4 flex items-center">
+                                  📊 <span className="ml-2">Credibility Assessment</span>
+                                </h3>
+                                {(() => {
+                                  const score = parsedAnalysis.credibility_score || result.gemini_analysis.credibility_score;
+                                  const confidence = formatConfidenceLevel(score);
+                                  return (
+                                    <>
+                                      <div className="flex items-center mb-4">
+                                        <div className="flex-1 bg-gray-700 rounded-full h-8 relative overflow-hidden">
+                                          <div 
+                                            className={`h-8 rounded-full transition-all duration-1000 ${
+                                              score >= 70 ? 'bg-gradient-to-r from-green-400 to-green-600' :
+                                              score >= 40 ? 'bg-gradient-to-r from-yellow-400 to-yellow-600' : 
+                                              'bg-gradient-to-r from-red-400 to-red-600'
+                                            }`}
+                                            style={{width: `${score}%`}}
+                                          ></div>
+                                        </div>
+                                        <div className="ml-4 text-center">
+                                          <div className="text-2xl font-bold text-white">{score}/100</div>
+                                        </div>
+                                      </div>
+                                      <div className="flex justify-between items-center">
+                                        <div className={`font-semibold ${
+                                          score >= 70 ? 'text-green-300' :
+                                          score >= 40 ? 'text-yellow-300' : 'text-red-300'
+                                        }`}>
+                                          {getCredibilityLabel(score)}
+                                        </div>
+                                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                          score >= 90 ? 'bg-green-900/30 text-green-300' :
+                                          score >= 70 ? 'bg-green-900/30 text-green-300' :
+                                          score >= 50 ? 'bg-yellow-900/30 text-yellow-300' :
+                                          score >= 30 ? 'bg-orange-900/30 text-orange-300' :
+                                          'bg-red-900/30 text-red-300'
+                                        }`}>
+                                          {confidence.level} Confidence
+                                        </div>
+                                      </div>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {/* Overall Summary */}
+                            {(parsedAnalysis.overall_assessment || parsedAnalysis.summary) && (
+                              <div className="bg-slate-900/30 backdrop-blur-sm p-6 rounded-xl border border-slate-400/30">
+                                <h3 className="text-lg font-semibold text-slate-300 mb-4 flex items-center">
+                                  📋 <span className="ml-2">Overall Assessment</span>
+                                </h3>
+                                <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-slate-400/30">
+                                  <p className="text-gray-200 leading-relaxed">
+                                    {parsedAnalysis.overall_assessment || parsedAnalysis.summary}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Psychological Insights */}
+                            {(parsedAnalysis.gemini_summary || parsedAnalysis.psychological_insights || result.gemini_analysis.gemini_summary) && (
+                              <div className="bg-purple-900/30 backdrop-blur-sm p-6 rounded-xl border border-purple-400/30">
+                                <h3 className="text-lg font-semibold text-purple-300 mb-4 flex items-center">
+                                  🧠 <span className="ml-2">Psychological Insights</span>
+                                </h3>
+                                {(() => {
+                                  const insights = parsedAnalysis.psychological_insights || parsedAnalysis.gemini_summary || result.gemini_analysis.gemini_summary;
+                                  if (typeof insights === 'object' && insights !== null) {
+                                    return (
+                                      <div className="space-y-3">
+                                        {insights.tone && (
+                                          <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-purple-400/30">
+                                            <span className="font-semibold text-purple-300">Tone Analysis:</span>
+                                            <p className="text-gray-200 mt-1">{insights.tone}</p>
+                                          </div>
+                                        )}
+                                        {insights.motivation && (
+                                          <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-purple-400/30">
+                                            <span className="font-semibold text-purple-300">Motivation Assessment:</span>
+                                            <p className="text-gray-200 mt-1">{insights.motivation}</p>
+                                          </div>
+                                        )}
+                                        {insights.credibility && (
+                                          <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-purple-400/30">
+                                            <span className="font-semibold text-purple-300">Credibility Analysis:</span>
+                                            <p className="text-gray-200 mt-1">{insights.credibility}</p>
+                                          </div>
+                                        )}
+                                        {insights.behavioral_indicators && (
+                                          <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-purple-400/30">
+                                            <span className="font-semibold text-purple-300">Behavioral Indicators:</span>
+                                            <p className="text-gray-200 mt-1">{insights.behavioral_indicators}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
+                                      <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-purple-400/30">
+                                        <p className="text-gray-200">{insights}</p>
+                                      </div>
+                                    );
+                                  }
+                                })()}
+                              </div>
+                            )}
+
+                            {/* Recommendations */}
+                            {(parsedAnalysis.recommendation || parsedAnalysis.recommendations || result.gemini_analysis.recommendation) && (
+                              <div className="bg-green-900/30 backdrop-blur-sm p-6 rounded-xl border border-green-400/30">
+                                <h3 className="text-lg font-semibold text-green-300 mb-4 flex items-center">
+                                  💡 <span className="ml-2">AI Recommendations</span>
+                                </h3>
+                                {(() => {
+                                  const recommendations = parsedAnalysis.recommendations || parsedAnalysis.recommendation || result.gemini_analysis.recommendation;
+                                  if (Array.isArray(recommendations)) {
+                                    return (
+                                      <div className="space-y-3">
+                                        {recommendations.map((rec, index) => (
+                                          <div key={index} className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border-l-4 border-green-400 shadow-sm">
+                                            <div className="flex items-start">
+                                              <span className="bg-green-900/50 text-green-300 font-bold rounded-full w-6 h-6 flex items-center justify-center text-sm mr-3 mt-0.5">
+                                                {index + 1}
+                                              </span>
+                                              <p className="text-gray-200 leading-relaxed">{rec}</p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
+                                      <div className="bg-black/20 backdrop-blur-sm p-4 rounded-lg border border-green-400/30">
+                                        <p className="text-gray-200">{recommendations}</p>
+                                      </div>
+                                    );
+                                  }
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

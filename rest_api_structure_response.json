@@ -1,0 +1,193 @@
+{
+    "session_id": "e685246a-dc27-4d24-803c-d9799860a3e6",
+    "speaker_name": "Speaker 1",
+    "transcript": "and he told me that um he was trying to figure some stuff out and um I asked him like what and he well I mean I'll never forget it he was smoking a cigarette and he was like really calm and he looked at me and he said what would you say if I said if I told you Laura was dead and I was like you know I was like what and basically he told me that um the night that Laura had come over to the house that she had died and that whenever I left that he just panicked and freaked out and I got I started freaking out and I was asking him why he didn't call the cops call for help like he told me he was going to and he told me that um he got scared that he was a black man with a dead white woman and nobody was gonna believe him that it was an accident.",
+    "audio_quality": {
+        "duration": 53.421,
+        "sample_rate": 44100,
+        "channels": 2,
+        "loudness": -22.185010225928103,
+        "quality_score": 100,
+        "overall_quality": "Good",
+        "signal_to_noise_ratio": 0.0,
+        "clarity_score": 50.0,
+        "volume_consistency": 50.0,
+        "background_noise_level": 0.0
+    },
+    "emotion_analysis": [
+        {
+            "label": "sad",
+            "score": 0.8
+        },
+        {
+            "label": "fear",
+            "score": 0.7
+        },
+        {
+            "label": "surprise",
+            "score": 0.6
+        },
+        {
+            "label": "stress",
+            "score": 0.7
+        },
+        {
+            "label": "uncertainty",
+            "score": 0.6
+        },
+        {
+            "label": "nervousness",
+            "score": 0.5
+        },
+        {
+            "label": "neutral",
+            "score": 0.3
+        }
+    ],
+    "speaker_transcripts": {
+        "Speaker 1": "and he told me that um he was trying to figure some stuff out and um I asked him like what and he well I mean I'll never forget it he was smoking a cigarette and he was like really calm and he looked at me and he said what would you say if I said if I told you Laura was dead and I was like you know I was like what and basically he told me that um the night that Laura had come over to the house that she had died and that whenever I left that he just panicked and freaked out and I got I started freaking out and I was asking him why he didn't call the cops call for help like he told me he was going to and he told me that um he got scared that he was a black man with a dead white woman and nobody was gonna believe him that it was an accident."
+    },
+    "red_flags_per_speaker": {
+        "Speaker 1": [
+            "Numerous filler words ('um', 'like') suggesting hesitation and potential deception.",
+            "Varied speaking rate; slower pace when describing the crucial event, potentially indicating stress and fabrication.",
+            "Changes in vocal pitch, particularly a higher pitch when recounting her emotional response, possibly indicating genuine distress but also potential exaggeration for effect.",
+            "Long pauses before and after key details, such as the revelation of Laura's death, suggesting deliberation and potential withholding of information."
+        ]
+    },
+    "credibility_score": 60,
+    "confidence_level": "medium",
+    "gemini_summary": {
+        "tone": "The speaker's tone is largely distressed and emotional, but there are noticeable inconsistencies.  The voice sometimes cracks, especially when describing the immediate aftermath of the discovery, suggesting genuine emotional involvement, but the frequent use of filler words and the relatively calm tone when describing the initial conversation with the man raises concerns.",
+        "motivation": "The speaker appears genuinely distraught and concerned, but her narrative lacks some details and her emotional expression seems somewhat staged at times. The motivation to recount the events is clear, but the underlying reasons for potential inconsistencies need further investigation.",
+        "credibility": "The vocal delivery presents a mixed picture. While the emotional response seems authentic in parts, inconsistencies in pacing, pauses, and filler words undermine overall credibility. The speaker's emotional reactions are seemingly heightened to a degree that doesn't entirely match the description of the events.",
+        "emotional_state": "The speaker's emotional state appears genuine in some parts, but there are moments where the emotional expression seems exaggerated or inconsistent with the narrative. This suggests a potential attempt to manipulate the listener's perception of the situation.",
+        "communication_style": "The communication style is characterized by frequent use of filler words, hesitations, and variations in speaking rate, all of which point to a lack of fluency and potential nervousness. However, the clarity of the narrative is not entirely compromised by this style.",
+        "key_concerns": "The primary concerns are the significant hesitations, inconsistent speaking rate, and the potential exaggeration of emotional response. These factors suggest a need for further investigation to clarify inconsistencies and determine the accuracy of the details provided.",
+        "strengths": "The speaker's emotional distress, as conveyed through vocal tone and pitch variations, adds to the apparent authenticity of her emotional response to the events. The narrative, despite its flaws, is relatively coherent and easy to follow."
+    },
+    "recommendations": [
+        "Conduct a follow-up interview with more specific and targeted questions to clarify inconsistencies in the narrative.",
+        "Verify the details of the events with independent sources, including law enforcement records and witness statements."
+    ],
+    "linguistic_analysis": {
+        "word_count": 0,
+        "hesitation_count": 0,
+        "qualifier_count": 0,
+        "certainty_count": 0,
+        "filler_count": 0,
+        "repetition_count": 0,
+        "formality_score": 50.0,
+        "complexity_score": 50.0,
+        "avg_word_length": 5.0,
+        "avg_words_per_sentence": 10.0,
+        "sentence_count": 0,
+        "speech_rate_wpm": null,
+        "hesitation_rate": null,
+        "confidence_ratio": 0.5,
+        "speech_patterns": "The speech patterns are characterized by frequent use of filler words ('um', 'like'), hesitations, and variations in speaking rate.  Longer pauses before and after crucial information are also noteworthy.",
+        "word_choice": "The word choice is generally simple and straightforward, consistent with a recounting of a traumatic event.  However, the overuse of filler words points to potential nervousness or deception.",
+        "emotional_consistency": "The emotional consistency is questionable.  Whilst genuine distress is apparent, the intensity of the emotional response doesn't always align seamlessly with the narrative's progression.",
+        "detail_level": "The detail level varies; some aspects are described vividly (the man smoking, his calm demeanor), while others are more vague or glossed over (certain actions and reactions).",
+        "pause_analysis": "Analysis not available",
+        "filler_word_analysis": "Analysis not available",
+        "repetition_analysis": "Analysis not available",
+        "hesitation_analysis": "Analysis not available",
+        "qualifier_analysis": "Analysis not available",
+        "certainty_analysis": "Analysis not available",
+        "formality_analysis": "Analysis not available",
+        "complexity_analysis": "Analysis not available",
+        "avg_word_length_analysis": "Analysis not available",
+        "avg_words_per_sentence_analysis": "Analysis not available",
+        "sentence_count_analysis": "Analysis not available",
+        "overall_linguistic_analysis": "Analysis not available"
+    },
+    "risk_assessment": {
+        "overall_risk": "medium",
+        "risk_factors": [
+            "Inconsistencies in the narrative and vocal delivery.",
+            "Excessive use of filler words and hesitations.",
+            "Varied speaking rate and pitch changes."
+        ],
+        "mitigation_suggestions": [
+            "Further investigation and verification of facts.",
+            "Detailed follow-up questions focusing on inconsistencies."
+        ]
+    },
+    "session_insights": {
+        "consistency_analysis": "Analysis not available",
+        "behavioral_evolution": "Analysis not available",
+        "risk_trajectory": "Analysis not available",
+        "conversation_dynamics": "Analysis not available"
+    },
+    "manipulation_assessment": {
+        "manipulation_score": 20,
+        "manipulation_tactics": [
+            "Emotional exaggeration"
+        ],
+        "manipulation_explanation": "The speaker's emotional response seems heightened at times, potentially to evoke sympathy and shift focus from inconsistencies in the narrative.  The emphasis on their distress might be an attempt to overshadow potential gaps in their account.",
+        "example_phrases": [
+            "I started freaking out"
+        ]
+    },
+    "argument_analysis": {
+        "argument_strengths": [
+            "The narrative is relatively coherent and easy to follow."
+        ],
+        "argument_weaknesses": [
+            "Significant inconsistencies in emotional expression and vocal delivery.",
+            "Lack of detail in certain key areas."
+        ],
+        "overall_argument_coherence_score": 65
+    },
+    "speaker_attitude": {
+        "respect_level_score": 80,
+        "sarcasm_detected": false,
+        "sarcasm_confidence_score": 0,
+        "tone_indicators_respect_sarcasm": []
+    },
+    "enhanced_understanding": {
+        "key_inconsistencies": [
+            "Discrepancy between the described calmness of the man and the speaker's subsequent heightened emotional response.",
+            "The lack of detail regarding the immediate events leading up to Laura's death."
+        ],
+        "areas_of_evasiveness": [
+            "The speaker avoids providing specific details on the man's immediate actions after Laura's death."
+        ],
+        "suggested_follow_up_questions": [
+            "Can you describe in more detail what the man was doing when he told you Laura was dead?",
+            "What were your immediate actions after you left the house?",
+            "Can you describe the scene when you returned to the house and found Laura?"
+        ],
+        "unverified_claims": [
+            "The speaker's account of the man's fear of not being believed due to racial dynamics."
+        ]
+    },
+    "audio_analysis": {
+        "vocal_stress_indicators": [
+            "Analysis not available"
+        ],
+        "pitch_analysis": "Analysis not available",
+        "pause_patterns": "Analysis not available",
+        "vocal_confidence_level": 50,
+        "speaking_pace_consistency": "Analysis not available",
+        "speaking_rate_variations": "Analysis not available",
+        "voice_quality": "Analysis not available"
+    },
+    "quantitative_metrics": {
+        "speech_rate_words_per_minute": 0,
+        "formality_score": 50,
+        "hesitation_count": 0,
+        "filler_word_frequency": 0,
+        "repetition_count": 0,
+        "sentence_length_variability": 50,
+        "vocabulary_complexity": 50
+    },
+    "conversation_flow": "Analysis not available",
+    "behavioral_patterns": "Analysis not available",
+    "verification_suggestions": [
+        "Request additional information"
+    ],
+    "overall_risk": "medium",
+    "deception_flags": null
+}

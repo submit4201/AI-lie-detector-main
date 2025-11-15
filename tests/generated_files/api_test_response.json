@@ -1,0 +1,162 @@
+{
+  "session_id": "83836f70-e946-4be2-abc5-d8eb4c10ea07",
+  "transcript": "the vice like name I guess you know.\n\nMm-hm.\n\nHe uh the my roommate was staying in the garage with\n\nHe thought I was asleep one night and he was sitting on my bed and uh tried to like yank it over the floor and uh\n\nHe's got really little shit now.\n\nAnd uh like she get up and she walk away and I see her right there and",
+  "audio_quality": {
+    "duration": 28.6,
+    "sample_rate": 48000,
+    "channels": 2,
+    "loudness": -44.24507755078458,
+    "quality_score": 75
+  },
+  "emotion_analysis": [
+    {
+      "label": "neutral",
+      "score": 0.5
+    },
+    {
+      "label": "nervousness",
+      "score": 0.6
+    },
+    {
+      "label": "uncertainty",
+      "score": 0.4
+    },
+    {
+      "label": "stress",
+      "score": 0.3
+    },
+    {
+      "label": "fear",
+      "score": 0.2
+    }
+  ],
+  "speaker_transcripts": {
+    "Speaker 1": "the vice like name I guess you know. He uh the my roommate was staying in the garage with He thought I was asleep one night and he was sitting on my bed and uh tried to like yank it over the floor and uh He's got really little shit now. And uh like she get up and she walk away and I see her right there and"
+  },
+  "red_flags_per_speaker": {
+    "Speaker 1": [
+      "Vague and unclear language",
+      "Use of filler words ('uh', 'like')",
+      "Inconsistent narrative flow",
+      "Lack of specific details"
+    ]
+  },
+  "credibility_score": 40,
+  "confidence_level": "low",
+  "gemini_summary": {
+    "tone": "The speaker's tone is hesitant and unclear, suggesting potential nervousness or deception.  The narrative is disjointed and lacks coherence.",
+    "motivation": "The underlying motivation is unclear, but the narrative suggests a possible attempt to downplay or conceal certain events.",
+    "credibility": "The credibility is low due to the vague and inconsistent nature of the account.  The lack of detail raises concerns about the accuracy and truthfulness of the statement.",
+    "emotional_state": "The speaker's emotional state is difficult to assess from the text alone, but the hesitant speech and filler words suggest potential anxiety or stress.",
+    "communication_style": "The communication style is rambling and disorganized, with frequent interruptions and unclear transitions between ideas.",
+    "key_concerns": "The main concerns are the vagueness of the narrative, the inconsistent flow of information, and the use of filler words, all of which suggest potential deception or an attempt to avoid providing complete information.",
+    "strengths": ""
+  },
+  "recommendations": [
+    "Request clarification on the vague statements and missing details.",
+    "Ask follow-up questions to probe inconsistencies and assess the speaker's emotional responses."
+  ],
+  "linguistic_analysis": {
+    "word_count": 69,
+    "hesitation_count": 9,
+    "qualifier_count": 1,
+    "certainty_count": 1,
+    "filler_count": 4,
+    "repetition_count": 2,
+    "formality_score": 48.6,
+    "complexity_score": 0.0,
+    "avg_word_length": 3.5,
+    "avg_words_per_sentence": 17.2,
+    "sentence_count": 4,
+    "speech_rate_wpm": 144.8,
+    "hesitation_rate": 18.9,
+    "confidence_ratio": 0.5,
+    "speech_patterns": "The speech pattern is characterized by hesitations ('uh'), repetitions, and run-on sentences, suggesting nervousness or a lack of preparation.",
+    "word_choice": "The word choice is simple and informal. The use of vague terms such as 'little shit' lacks specificity and clarity.",
+    "emotional_consistency": "Emotional consistency is difficult to assess due to the limited information, but the use of filler words could indicate nervousness.",
+    "detail_level": "The detail level is very low, with many vague statements and omissions of crucial information."
+  },
+  "risk_assessment": {
+    "overall_risk": "medium",
+    "risk_factors": [
+      "Inconsistent and vague statements",
+      "Lack of clear narrative flow"
+    ],
+    "mitigation_suggestions": [
+      "Further investigation is needed to corroborate the information provided.",
+      "Seek additional evidence to verify the speaker's claims."
+    ]
+  },
+  "session_insights": null,
+  "manipulation_assessment": {
+    "manipulation_score": 20,
+    "manipulation_tactics": [],
+    "manipulation_explanation": "There is no clear evidence of manipulative tactics, but the vagueness could be an attempt to avoid providing full details.",
+    "example_phrases": []
+  },
+  "argument_analysis": {
+    "argument_strengths": [],
+    "argument_weaknesses": [
+      "Lack of supporting details",
+      "Inconsistent and unclear narrative",
+      "Vague and ambiguous language"
+    ],
+    "overall_argument_coherence_score": 20
+  },
+  "speaker_attitude": {
+    "respect_level_score": 50,
+    "sarcasm_detected": false,
+    "sarcasm_confidence_score": 0,
+    "tone_indicators_respect_sarcasm": []
+  },
+  "enhanced_understanding": {
+    "key_inconsistencies": [
+      "The narrative jumps between different events without clear connection."
+    ],
+    "areas_of_evasiveness": [
+      "The speaker avoids providing specific details about the events described."
+    ],
+    "suggested_follow_up_questions": [
+      "Can you please elaborate on what happened?",
+      "What exactly do you mean by 'little shit'?",
+      "Can you provide more details about the timing and sequence of events?"
+    ],
+    "unverified_claims": [
+      "All claims made by the speaker require further verification."
+    ]
+  },
+  "quantitative_metrics": {
+    "word_count": 69,
+    "hesitation_count": 9,
+    "qualifier_count": 1,
+    "certainty_count": 1,
+    "filler_count": 4,
+    "repetition_count": 2,
+    "formality_score": 48.6,
+    "complexity_score": 0,
+    "avg_word_length": 3.5,
+    "avg_words_per_sentence": 17.2,
+    "sentence_count": 4,
+    "speech_rate_wpm": 144.8,
+    "hesitation_rate": 18.9,
+    "confidence_ratio": 0.5,
+    "speech_patterns": "Speaker demonstrates moderate to fast speech pace with high hesitation frequency and low linguistic complexity. Speech contains 9 hesitation markers across 69 words, suggesting some uncertainty or processing time.",
+    "word_choice": "Word choice reflects simple vocabulary in a formal register. Analysis reveals balanced use of certain and uncertain language, with 1 qualifiers versus 1 certainty markers.",
+    "emotional_consistency": "Speaker demonstrates moderate emotional consistency with some uncertainty. Stress indicator analysis shows elevated levels based on 10 total uncertainty/hesitation markers, suggesting potential anxiety or deception concerns.",
+    "detail_level": "Response provides brief detail level using moderately complex sentence structures. Complexity score of 0.0/100 indicates simple communication style with average 17.2 words per sentence."
+  },
+  "audio_analysis": {
+    "vocal_stress_indicators": [
+      "Analysis pending or not applicable for text-only"
+    ],
+    "pitch_analysis": "Analysis pending or not applicable for text-only",
+    "pause_patterns": "Analysis pending or not applicable for text-only",
+    "vocal_confidence_level": 0,
+    "speaking_pace_consistency": "Analysis pending or not applicable for text-only",
+    "speaking_rate_variations": "Analysis pending or not applicable for text-only",
+    "voice_quality": "Analysis pending or not applicable for text-only"
+  },
+  "conversation_flow": null,
+  "behavioral_patterns": null,
+  "verification_suggestions": null
+}

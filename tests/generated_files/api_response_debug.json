@@ -1,0 +1,102 @@
+{
+  "session_id": "test_session",
+  "transcript": "that's pretty impressive Ben's mom used to live inside of a mountain right out here right out here on this mountain in Oakville",
+  "audio_quality": {
+    "duration": 37.33,
+    "sample_rate": 48000,
+    "channels": 2,
+    "loudness": -37.302848236555626,
+    "quality_score": 75
+  },
+  "emotion_analysis": [
+    {
+      "label": "surprise",
+      "score": 0.9611802101135254
+    },
+    {
+      "label": "neutral",
+      "score": 0.02268020063638687
+    },
+    {
+      "label": "joy",
+      "score": 0.005377697292715311
+    },
+    {
+      "label": "anger",
+      "score": 0.004350838717073202
+    },
+    {
+      "label": "fear",
+      "score": 0.002500489354133606
+    },
+    {
+      "label": "disgust",
+      "score": 0.0022680985275655985
+    },
+    {
+      "label": "sadness",
+      "score": 0.0016424747882410884
+    }
+  ],
+  "speaker_transcripts": {
+    "Speaker 1": "that's pretty impressive Ben's mom used to live inside of a mountain right out here right out here on this mountain in Oakville"
+  },
+  "red_flags_per_speaker": {
+    "Speaker 1": [
+      "Repetition of \"right out here\" suggests potential uncertainty or fabrication.",
+      "Unusually specific and unusual claim requiring further verification."
+    ]
+  },
+  "credibility_score": 60,
+  "confidence_level": "medium",
+  "gemini_summary": {
+    "tone": "The tone is conversational but the unusual claim introduces a note of incredulity.",
+    "motivation": "The motivation behind sharing this anecdote is unclear. It could be an attempt to impress, to deflect, or simply a genuine, albeit unusual, memory.",
+    "credibility": "The credibility is currently low due to the unusual nature of the claim and the repetition, suggesting potential fabrication or embellishment.  Further investigation is needed.",
+    "emotional_state": "The emotional state is difficult to assess from this single statement.  More data is required to determine emotional consistency and authenticity.",
+    "communication_style": "The communication style is casual but the repetition suggests a lack of confidence in the statement's truthfulness.",
+    "key_concerns": "The main concern is the unusual and unverifiable claim about Ben's mother living inside a mountain. The repetition of 'right out here' further raises suspicion.",
+    "strengths": "No apparent strengths in terms of credibility from this single statement."
+  },
+  "recommendations": [
+    "Verify the claim about Ben's mother living in a mountain in Oakville through independent sources.",
+    "Gather more conversational data to assess the speaker's overall communication patterns and emotional consistency."
+  ],
+  "linguistic_analysis": {
+    "word_count": 23,
+    "hesitation_count": 0,
+    "qualifier_count": 0,
+    "certainty_count": 0,
+    "filler_count": 0,
+    "repetition_count": 0,
+    "formality_score": 0.0,
+    "complexity_score": 86.8,
+    "avg_word_length": 4.6,
+    "avg_words_per_sentence": 23.0,
+    "sentence_count": 1,
+    "speech_rate_wpm": 37.0,
+    "hesitation_rate": null,
+    "confidence_ratio": 0.0,
+    "speech_patterns": "The repetition of \"right out here\" indicates a potential hesitation or attempt to fill a gap in memory. The overall pace is likely conversational.",
+    "word_choice": "The vocabulary is simple and straightforward, but the unusual claim (\"live inside a mountain\") stands out.",
+    "emotional_consistency": "Emotional consistency cannot be assessed from a single statement.",
+    "detail_level": "The detail level is low.  While the location is specified, there is little other detail about the claim."
+  },
+  "risk_assessment": {
+    "overall_risk": "low",
+    "risk_factors": [
+      "Unverifiable claim",
+      "Potential for exaggeration or fabrication"
+    ],
+    "mitigation_suggestions": [
+      "Independent verification of the claim",
+      "Further conversation to clarify the statement and assess credibility"
+    ]
+  },
+  "session_insights": {
+    "consistency_analysis": "Contextual analysis performed.",
+    "behavioral_evolution": "User behavior patterns considered.",
+    "risk_trajectory": "Risk assessment over time considered.",
+    "conversation_dynamics": "Overall conversation dynamics analyzed."
+  }
+}

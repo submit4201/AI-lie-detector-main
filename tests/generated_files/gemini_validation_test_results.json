@@ -1,0 +1,293 @@
+{
+  "test_1_empty": {
+    "speaker_transcripts": {
+      "Speaker 1": "Empty test transcript"
+    },
+    "red_flags_per_speaker": {
+      "Speaker 1": []
+    },
+    "credibility_score": 50,
+    "confidence_level": "medium",
+    "gemini_summary": {
+      "tone": "Analysis pending - technical issue encountered",
+      "motivation": "Unable to determine - requires manual review",
+      "credibility": "Inconclusive - technical analysis limitation",
+      "emotional_state": "Analysis incomplete",
+      "communication_style": "Requires further analysis",
+      "key_concerns": "Technical analysis limitation",
+      "strengths": "Unable to assess automatically"
+    },
+    "recommendations": [
+      "Manual review recommended due to technical analysis limitations",
+      "Consider re-running analysis with different audio quality"
+    ],
+    "linguistic_analysis": {
+      "word_count": 0,
+      "hesitation_count": 0,
+      "qualifier_count": 0,
+      "certainty_count": 0,
+      "filler_count": 0,
+      "repetition_count": 0,
+      "formality_score": 0,
+      "complexity_score": 0,
+      "avg_word_length": 0,
+      "avg_words_per_sentence": 0,
+      "sentence_count": 0,
+      "speech_rate_wpm": null,
+      "hesitation_rate": null,
+      "confidence_ratio": 0,
+      "speech_patterns": "Analysis unavailable - insufficient data",
+      "word_choice": "Analysis unavailable - insufficient data",
+      "emotional_consistency": "Analysis unavailable - insufficient data",
+      "detail_level": "Analysis unavailable - insufficient data"
+    },
+    "risk_assessment": {
+      "overall_risk": "medium",
+      "risk_factors": [
+        "Technical analysis limitation"
+      ],
+      "mitigation_suggestions": [
+        "Manual review recommended"
+      ]
+    },
+    "manipulation_assessment": {
+      "manipulation_score": 0,
+      "manipulation_tactics": [],
+      "manipulation_explanation": "N/A",
+      "example_phrases": []
+    },
+    "argument_analysis": {
+      "argument_strengths": [],
+      "argument_weaknesses": [],
+      "overall_argument_coherence_score": 0
+    },
+    "speaker_attitude": {
+      "respect_level_score": 50,
+      "sarcasm_detected": false,
+      "sarcasm_confidence_score": 0,
+      "tone_indicators_respect_sarcasm": []
+    },
+    "enhanced_understanding": {
+      "key_inconsistencies": [],
+      "areas_of_evasiveness": [],
+      "suggested_follow_up_questions": [],
+      "unverified_claims": []
+    },
+    "conversation_flow": "Conversation flow analysis will be available with more data",
+    "behavioral_patterns": "Behavioral pattern analysis requires extended conversation",
+    "verification_suggestions": [
+      "Verify key claims made by the speaker",
+      "Cross-reference statements with known facts",
+      "Monitor for consistency in follow-up questions"
+    ],
+    "session_insights": {
+      "consistency_analysis": "Initial analysis - consistency patterns will develop with more conversation",
+      "behavioral_evolution": "Behavioral patterns will emerge as the conversation continues",
+      "risk_trajectory": "Risk level progression analysis requires multiple data points",
+      "conversation_dynamics": "Conversation flow analysis will develop over time"
+    },
+    "audio_analysis": {
+      "vocal_stress_indicators": [
+        "Analysis pending or not applicable for text-only"
+      ],
+      "pitch_analysis": "Analysis pending or not applicable for text-only",
+      "pause_patterns": "Analysis pending or not applicable for text-only",
+      "vocal_confidence_level": 0,
+      "speaking_pace_consistency": "Analysis pending or not applicable for text-only",
+      "speaking_rate_variations": "Analysis pending or not applicable for text-only",
+      "voice_quality": "Analysis pending or not applicable for text-only"
+    }
+  },
+  "test_2_partial": {
+    "speaker_transcripts": {
+      "Speaker 1": "Partial test transcript"
+    },
+    "red_flags_per_speaker": {
+      "Speaker 1": []
+    },
+    "credibility_score": 75,
+    "confidence_level": "medium",
+    "gemini_summary": {
+      "tone": "Test tone analysis"
+    },
+    "recommendations": [
+      "Manual review recommended due to technical analysis limitations",
+      "Consider re-running analysis with different audio quality"
+    ],
+    "linguistic_analysis": {
+      "word_count": 0,
+      "hesitation_count": 0,
+      "qualifier_count": 0,
+      "certainty_count": 0,
+      "filler_count": 0,
+      "repetition_count": 0,
+      "formality_score": 0,
+      "complexity_score": 0,
+      "avg_word_length": 0,
+      "avg_words_per_sentence": 0,
+      "sentence_count": 0,
+      "speech_rate_wpm": null,
+      "hesitation_rate": null,
+      "confidence_ratio": 0,
+      "speech_patterns": "Analysis unavailable - insufficient data",
+      "word_choice": "Analysis unavailable - insufficient data",
+      "emotional_consistency": "Analysis unavailable - insufficient data",
+      "detail_level": "Analysis unavailable - insufficient data"
+    },
+    "risk_assessment": {
+      "overall_risk": "medium",
+      "risk_factors": [
+        "Technical analysis limitation"
+      ],
+      "mitigation_suggestions": [
+        "Manual review recommended"
+      ]
+    },
+    "manipulation_assessment": {
+      "manipulation_score": 0,
+      "manipulation_tactics": [],
+      "manipulation_explanation": "N/A",
+      "example_phrases": []
+    },
+    "argument_analysis": {
+      "argument_strengths": [],
+      "argument_weaknesses": [],
+      "overall_argument_coherence_score": 0
+    },
+    "speaker_attitude": {
+      "respect_level_score": 50,
+      "sarcasm_detected": false,
+      "sarcasm_confidence_score": 0,
+      "tone_indicators_respect_sarcasm": []
+    },
+    "enhanced_understanding": {
+      "key_inconsistencies": [],
+      "areas_of_evasiveness": [],
+      "suggested_follow_up_questions": [],
+      "unverified_claims": []
+    },
+    "conversation_flow": "Conversation flow analysis will be available with more data",
+    "behavioral_patterns": "Behavioral pattern analysis requires extended conversation",
+    "verification_suggestions": [
+      "Verify key claims made by the speaker",
+      "Cross-reference statements with known facts",
+      "Monitor for consistency in follow-up questions"
+    ],
+    "session_insights": {
+      "consistency_analysis": "Initial analysis - consistency patterns will develop with more conversation",
+      "behavioral_evolution": "Behavioral patterns will emerge as the conversation continues",
+      "risk_trajectory": "Risk level progression analysis requires multiple data points",
+      "conversation_dynamics": "Conversation flow analysis will develop over time"
+    },
+    "audio_analysis": {
+      "vocal_stress_indicators": [
+        "Analysis pending or not applicable for text-only"
+      ],
+      "pitch_analysis": "Analysis pending or not applicable for text-only",
+      "pause_patterns": "Analysis pending or not applicable for text-only",
+      "vocal_confidence_level": 0,
+      "speaking_pace_consistency": "Analysis pending or not applicable for text-only",
+      "speaking_rate_variations": "Analysis pending or not applicable for text-only",
+      "voice_quality": "Analysis pending or not applicable for text-only"
+    }
+  },
+  "test_3_complete": {
+    "speaker_transcripts": {
+      "Speaker 1": "Complete test transcript"
+    },
+    "red_flags_per_speaker": {
+      "Speaker 1": []
+    },
+    "credibility_score": 50,
+    "confidence_level": "medium",
+    "gemini_summary": {
+      "tone": "Analysis pending - technical issue encountered",
+      "motivation": "Unable to determine - requires manual review",
+      "credibility": "Inconclusive - technical analysis limitation",
+      "emotional_state": "Analysis incomplete",
+      "communication_style": "Requires further analysis",
+      "key_concerns": "Technical analysis limitation",
+      "strengths": "Unable to assess automatically"
+    },
+    "recommendations": [
+      "Manual review recommended due to technical analysis limitations",
+      "Consider re-running analysis with different audio quality"
+    ],
+    "linguistic_analysis": {
+      "word_count": 0,
+      "hesitation_count": 0,
+      "qualifier_count": 0,
+      "certainty_count": 0,
+      "filler_count": 0,
+      "repetition_count": 0,
+      "formality_score": 0,
+      "complexity_score": 0,
+      "avg_word_length": 0,
+      "avg_words_per_sentence": 0,
+      "sentence_count": 0,
+      "speech_rate_wpm": null,
+      "hesitation_rate": null,
+      "confidence_ratio": 0,
+      "speech_patterns": "Analysis unavailable - insufficient data",
+      "word_choice": "Analysis unavailable - insufficient data",
+      "emotional_consistency": "Analysis unavailable - insufficient data",
+      "detail_level": "Analysis unavailable - insufficient data"
+    },
+    "risk_assessment": {
+      "overall_risk": "medium",
+      "risk_factors": [
+        "Technical analysis limitation"
+      ],
+      "mitigation_suggestions": [
+        "Manual review recommended"
+      ]
+    },
+    "manipulation_assessment": {
+      "manipulation_score": 0,
+      "manipulation_tactics": [],
+      "manipulation_explanation": "N/A",
+      "example_phrases": []
+    },
+    "argument_analysis": {
+      "argument_strengths": [],
+      "argument_weaknesses": [],
+      "overall_argument_coherence_score": 0
+    },
+    "speaker_attitude": {
+      "respect_level_score": 50,
+      "sarcasm_detected": false,
+      "sarcasm_confidence_score": 0,
+      "tone_indicators_respect_sarcasm": []
+    },
+    "enhanced_understanding": {
+      "key_inconsistencies": [],
+      "areas_of_evasiveness": [],
+      "suggested_follow_up_questions": [],
+      "unverified_claims": []
+    },
+    "conversation_flow": "Conversation flow analysis will be available with more data",
+    "behavioral_patterns": "Behavioral pattern analysis requires extended conversation",
+    "verification_suggestions": [
+      "Verify key claims made by the speaker",
+      "Cross-reference statements with known facts",
+      "Monitor for consistency in follow-up questions"
+    ],
+    "session_insights": {
+      "consistency_analysis": "Initial analysis - consistency patterns will develop with more conversation",
+      "behavioral_evolution": "Behavioral patterns will emerge as the conversation continues",
+      "risk_trajectory": "Risk level progression analysis requires multiple data points",
+      "conversation_dynamics": "Conversation flow analysis will develop over time"
+    },
+    "audio_analysis": {
+      "vocal_stress_indicators": [
+        "Analysis pending or not applicable for text-only"
+      ],
+      "pitch_analysis": "Analysis pending or not applicable for text-only",
+      "pause_patterns": "Analysis pending or not applicable for text-only",
+      "vocal_confidence_level": 0,
+      "speaking_pace_consistency": "Analysis pending or not applicable for text-only",
+      "speaking_rate_variations": "Analysis pending or not applicable for text-only",
+      "voice_quality": "Analysis pending or not applicable for text-only"
+    }
+  }
+}

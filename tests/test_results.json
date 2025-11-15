@@ -1,0 +1,146 @@
+{
+  "timestamp": "2025-11-14T17:19:49.986657",
+  "tests_run": 15,
+  "tests_passed": 7,
+  "tests_failed": 8,
+  "test_results": {
+    "backend_validation": {
+      "passed": 1,
+      "failed": 2,
+      "tests": {
+        "run_backend_validation_clean.py": {
+          "passed": true,
+          "output": ""
+        },
+        "test_complete_validation.py": {
+          "passed": false,
+          "output": "Exit code: 1\nSTDOUT:\n\nSTDERR:\nTraceback (most recent call last):\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_complete_validation.py\", line 113, in <module>\n    test_default_structure_with_models()\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_complete_validation.py\", line 9, in test_default_structure_with_models\n    from backend.models import (\nModuleNotFoundError: No module named 'backend'\n"
+        },
+        "test_model_validation.py": {
+          "passed": false,
+          "output": "Exit code: 1\nSTDOUT:\n\nSTDERR:\nTraceback (most recent call last):\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_model_validation.py\", line 8, in <module>\n    from backend.models import LinguisticAnalysis, RiskAssessment, GeminiSummary, SessionInsights, AudioQualityMetrics\nModuleNotFoundError: No module named 'backend'\n"
+        }
+      }
+    },
+    "api_tests": {
+      "passed": 3,
+      "failed": 0,
+      "tests": {
+        "simple_api_test.py": {
+          "passed": true,
+          "output": "[FAIL] Error: [Errno 2] No such file or directory: 'h:/New folder/PAPAPAPEAPA/Documents/Videos/Deceptive/trial_lie_009.mp3'\n"
+        },
+        "test_api_data_flow_fixed.py": {
+          "passed": true,
+          "output": "[FAIL] Error: 'charmap' codec can't encode character '\\U0001f4e4' in position 0: character maps to <undefined>\n"
+        },
+        "test_complete_integration.py": {
+          "passed": true,
+          "output": "[TEST] Testing Complete AI Lie Detector Integration\n==================================================\n1. Testing API health...\n[FAIL] Could not connect to backend. Make sure it's running on http://localhost:8000\n"
+        }
+      }
+    },
+    "service_tests": {
+      "passed": 0,
+      "failed": 3,
+      "tests": {
+        "test_linguistic_service.py": {
+          "passed": false,
+          "output": "Test timed out after 60 seconds"
+        },
+        "test_enhanced_formality.py": {
+          "passed": false,
+          "output": "Test timed out after 60 seconds"
+        },
+        "test_formality_final.py": {
+          "passed": false,
+          "output": "Test timed out after 60 seconds"
+        }
+      }
+    },
+    "analysis_tests": {
+      "passed": 2,
+      "failed": 1,
+      "tests": {
+        "test_enhanced_analysis.py": {
+          "passed": true,
+          "output": "[FAIL] Test audio file not found: p:/python/New folder (2)/5.wav\n"
+        },
+        "test_enhanced_patterns.py": {
+          "passed": true,
+          "output": "\n[TEST] Testing: Repetition Test\nText: Well, I was right out here, right out here on the mountain. The whole thing, the whole thing was confusing.\n[FAIL] Test Error: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /analyze (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000020DC6D3F810>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))\n\n[TEST] Testing..."
+        },
+        "test_direct_patterns.py": {
+          "passed": false,
+          "output": "Test timed out after 60 seconds"
+        }
+      }
+    },
+    "session_tests": {
+      "passed": 1,
+      "failed": 1,
+      "tests": {
+        "test_e2e_session_insights.py": {
+          "passed": false,
+          "output": "Exit code: 1\nSTDOUT:\n[TEST] Starting End-to-End Session Insights Test\n==================================================\n\nSTDERR:\nTraceback (most recent call last):\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_e2e_session_insights.py\", line 141, in <module>\n    test_session_insights_e2e()\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_e2e_session_insights.py\", line 18, in test_session_insights_e2e\n    print(\"\\U0001f4cb Step 1: Creating new session...\")\n  File \"C:\\..."
+        },
+        "test_real_transcript_insights.py": {
+          "passed": true,
+          "output": "[TEST] Testing Enhanced Session Insights with Real Transcript\n============================================================\n1. Creating new session...\n[FAIL] Error during testing: HTTPConnectionPool(host='localhost', port=8000): Max retries exceeded with url: /session/new (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000029EAE814550>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')..."
+        }
+      }
+    },
+    "streaming_tests": {
+      "passed": 0,
+      "failed": 1,
+      "tests": {
+        "test_real_audio_file.py": {
+          "passed": false,
+          "output": "Exit code: 1\nSTDOUT:\n============================================================\nTESTING COMPLETE BACKEND WORKFLOW WITH REAL AUDIO FILE\n============================================================\n[FAIL] ERROR: Audio file not found at tests/test_extras/test_audio.mp3\n\nSTDERR:\n"
+        }
+      }
+    }
+  },
+  "errors": [
+    {
+      "test": "test_complete_validation.py",
+      "category": "backend_validation",
+      "error": "Exit code: 1\nSTDOUT:\n\nSTDERR:\nTraceback (most recent call last):\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_complete_validation.py\", line 113, in <module>\n    test_default_structure_with_models()\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_complete_validation.py\", line 9, in test_default_structure_with_models\n    from backend.models import (\nModuleNotFoundError: No module named 'backend'\n"
+    },
+    {
+      "test": "test_model_validation.py",
+      "category": "backend_validation",
+      "error": "Exit code: 1\nSTDOUT:\n\nSTDERR:\nTraceback (most recent call last):\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_model_validation.py\", line 8, in <module>\n    from backend.models import LinguisticAnalysis, RiskAssessment, GeminiSummary, SessionInsights, AudioQualityMetrics\nModuleNotFoundError: No module named 'backend'\n"
+    },
+    {
+      "test": "test_linguistic_service.py",
+      "category": "service_tests",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "test_enhanced_formality.py",
+      "category": "service_tests",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "test_formality_final.py",
+      "category": "service_tests",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "test_direct_patterns.py",
+      "category": "analysis_tests",
+      "error": "Test timed out after 60 seconds"
+    },
+    {
+      "test": "test_e2e_session_insights.py",
+      "category": "session_tests",
+      "error": "Exit code: 1\nSTDOUT:\n[TEST] Starting End-to-End Session Insights Test\n==================================================\n\nSTDERR:\nTraceback (most recent call last):\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_e2e_session_insights.py\", line 141, in <module>\n    test_session_insights_e2e()\n  File \"T:\\PYTHONPROJECTS2025\\AI-lie-detector-main\\tests\\test_e2e_session_insights.py\", line 18, in test_session_insights_e2e\n    print(\"\\U0001f4cb Step 1: Creating new session...\")\n  File \"C:\\Users\\submi\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\encodings\\cp1252.py\", line 19, in encode\n    return codecs.charmap_encode(input,self.errors,encoding_table)[0]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nUnicodeEncodeError: 'charmap' codec can't encode character '\\U0001f4cb' in position 0: character maps to <undefined>\n"
+    },
+    {
+      "test": "test_real_audio_file.py",
+      "category": "streaming_tests",
+      "error": "Exit code: 1\nSTDOUT:\n============================================================\nTESTING COMPLETE BACKEND WORKFLOW WITH REAL AUDIO FILE\n============================================================\n[FAIL] ERROR: Audio file not found at tests/test_extras/test_audio.mp3\n\nSTDERR:\n"
+    }
+  ]
+}

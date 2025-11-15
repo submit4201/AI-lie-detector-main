@@ -1,0 +1,299 @@
+/* Enhanced App Styles - Dark Theme Improvements */
+
+/* Root application styling */
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background-attachment: fixed;
+}
+
+/* Body styling for consistent dark theme */
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+  background-attachment: fixed;
+  color: #e2e8f0;
+}
+
+/* App container */
+.app-container {
+  min-height: 100vh;
+  background: transparent;
+  padding: 1rem;
+}
+
+/* Card overrides for consistent dark theme */
+.card, [class*="card"] {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Card content styling */
+.card-content, [class*="card-content"] {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+}
+
+/* Section backgrounds */
+.section-container {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Button styling */
+.btn, button {
+  background: rgba(139, 92, 246, 0.2) !important;
+  border: 1px solid rgba(139, 92, 246, 0.5) !important;
+  color: #e2e8f0 !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn:hover, button:hover {
+  background: rgba(139, 92, 246, 0.3) !important;
+  border-color: rgba(139, 92, 246, 0.7) !important;
+  color: #ffffff !important;
+}
+
+/* Export section specific styling */
+.export-section {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Session history styling */
+.session-history {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Analysis breakdown styling */
+.analysis-breakdown {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+/* Progress bars */
+.progress-bar {
+  background: rgba(139, 92, 246, 0.2) !important;
+  border-radius: 0.5rem !important;
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, #8b5cf6, #a855f7) !important;
+}
+
+/* Input styling */
+input, textarea, select {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  color: #e2e8f0 !important;
+  border-radius: 0.5rem !important;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(139, 92, 246, 0.7) !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+  outline: none !important;
+}
+
+/* Badge styling */
+.badge {
+  background: rgba(139, 92, 246, 0.2) !important;
+  border: 1px solid rgba(139, 92, 246, 0.4) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Text colors */
+.text-muted {
+  color: #94a3b8 !important;
+}
+
+.text-primary {
+  color: #a855f7 !important;
+}
+
+/* Remove any white backgrounds */
+.bg-white, .bg-gray-50, .bg-gray-100 {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.6);
+}
+
+/* Animation enhancements */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced glow effects */
+.glow-purple {
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.2);
+}
+
+.glow-purple:hover {
+  box-shadow: 0 6px 30px rgba(139, 92, 246, 0.3);
+}
+
+/* Ensure all sections have consistent styling */
+[class*="Section"], [class*="section"] {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 0.75rem !important;
+  margin-bottom: 1.5rem !important;
+}
+
+/* Fix for any remaining light backgrounds */
+.bg-background, .bg-card, .bg-muted {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Ensure proper contrast for text */
+.text-foreground, .text-card-foreground {
+  color: #e2e8f0 !important;
+}
+
+/* Loading and error states */
+.loading-state, .error-state {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+
+/* Additional overrides for stubborn light backgrounds */
+div[class*="bg-white"], div[class*="bg-gray"], div[class*="bg-slate"] {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Tab buttons and interactive elements */
+.tab-button, button[class*="tab"] {
+  background: rgba(139, 92, 246, 0.2) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+}
+
+.tab-button:hover, button[class*="tab"]:hover {
+  background: rgba(139, 92, 246, 0.3) !important;
+  color: #ffffff !important;
+}
+
+/* Progress bars and meters */
+.progress-container {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Modal and dialog backgrounds */
+.modal, .dialog, [role="dialog"] {
+  background: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+/* Dropdown and select menus */
+select, .select-menu, .dropdown {
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+}
+
+/* Table styling */
+table, .table {
+  background: rgba(0, 0, 0, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+
+th, .table-header {
+  background: rgba(139, 92, 246, 0.2) !important;
+  color: #e2e8f0 !important;
+}
+
+td, .table-cell {
+  border-color: rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Override any remaining Tailwind utilities */
+.bg-background {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+.bg-muted {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.bg-card {
+  background: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Ensure text readability */
+.text-foreground {
+  color: #e2e8f0 !important;
+}
+
+.text-muted-foreground {
+  color: #94a3b8 !important;
+}
+
+/* Border utilities */
+.border-border {
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
+
+/* Ring utilities for focus states */
+.ring-ring {
+  --tw-ring-color: rgba(139, 92, 246, 0.5) !important;
+}
+
+/* Component-specific overrides */
+.lucide {
+  color: #e2e8f0 !important;
+}
+
+/* Ensure all children inherit proper colors */
+* {
+  color: inherit;
+}
+
+/* Force override for any stubborn components */
+.force-dark {
+  background: rgba(0, 0, 0, 0.6) !important;
+  color: #e2e8f0 !important;
+  border-color: rgba(139, 92, 246, 0.3) !important;
+}
