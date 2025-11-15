@@ -4,11 +4,19 @@ import logging
 import base64
 import os
 import asyncio
+import inspect
+import functools
 from typing import Dict, Any, Optional, List
 import httpx # Added
 import json # Ensure json is imported for JSONDecodeError
 
-from backend.config import GEMINI_API_KEY
+from backend.config import (
+    GEMINI_API_KEY,
+    GEMINI_MODEL_TRANSCRIBE,
+    GEMINI_MODEL_ANALYSIS,
+    GEMINI_MODEL_STRUCTURED,
+    GEMINI_FALLBACK_MODELS,
+)
 from backend.services.json_utils import parse_gemini_response, safe_json_parse, create_fallback_response, extract_text_from_gemini_response
 
 from backend.models import (
@@ -24,9 +32,64 @@ from backend.services.psychological_service import PsychologicalService
 from backend.services.audio_analysis_service import AudioAnalysisService
 # from backend.services.interaction_metrics_service import InteractionMetricsService # File does not exist
 from backend.services.conversation_flow_service import ConversationFlowService
+from backend.services.quantitative_metrics_service import QuantitativeMetricsService
 # from backend.services.linguistic_service import analyze_linguistic_patterns # Causes circular import - import locally where needed
 
 logger = logging.getLogger(__name__)
+
+
+def _build_generate_url(model: str) -> str:
+    return f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={GEMINI_API_KEY}"
+
+
+def _list_available_models() -> List[str]:
+    """Call ListModels endpoint and return a list of model ids (names)."""
+    try:
+        if not GEMINI_API_KEY:
+            return []
+        resp = requests.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={GEMINI_API_KEY}", timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            models = []
+            for m in data.get("models", []):
+                # model entries often have a 'name' field like 'models/gemini-2.5'
+                name = m.get("name") or m.get("model") or m.get("id")
+                if name:
+                    # Normalize to just model id if full path provided
+                    models.append(name.split("/")[-1])
+            return models
+    except Exception:
+        logger.debug("Failed to list available Gemini models", exc_info=True)
+    return []
+
+
+def _choose_model(preferred: str) -> str:
+    """Return preferred model if available, otherwise pick the first available fallback."""
+    try:
+        # If no API key, just return preferred (calls will fail later with clear error)
+        if not GEMINI_API_KEY:
+            return preferred
+
+        available = _list_available_models()
+        if not available:
+            return preferred
+
+        # If the preferred model is listed, return it directly
+        if preferred in available:
+            logger.info(f"Using Gemini model: {preferred}")
+            return preferred
+
+        # Try configured fallbacks
+        for fb in GEMINI_FALLBACK_MODELS:
+            if fb in available:
+                logger.info(f"Falling back to available Gemini model: {fb}")
+                return fb
+
+        # As a last resort, return the first available model
+        logger.info(f"Using first available Gemini model: {available[0]}")
+        return available[0]
+    except Exception:
+        return preferred
 
 # Define GeminiService class
 class GeminiService:
@@ -36,7 +99,8 @@ class GeminiService:
             logger.error("GEMINI_API_KEY not configured.")
             return None
 
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        model = _choose_model(GEMINI_MODEL_ANALYSIS)
+        gemini_api_url = _build_generate_url(model)
         
         headers = {"Content-Type": "application/json"}
         
@@ -261,7 +325,8 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
         - All new fields (manipulation_assessment, argument_analysis, speaker_attitude, enhanced_understanding) and their sub-fields are MANDATORY and must be correctly formatted.
         """
 
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        model = _choose_model(GEMINI_MODEL_ANALYSIS)
+        gemini_api_url = _build_generate_url(model)
 
         headers = {"Content-Type": "application/json"}
         payload = {
@@ -289,6 +354,7 @@ def query_gemini_with_audio(audio_path: str, transcript: str, flags: Dict[str, A
         if response.status_code == 200:
             gemini_response = response.json()
             logger.info(f"Gemini audio analysis response received")
+            
             
             # Use centralized JSON parsing
             result = parse_gemini_response(gemini_response, allow_partial=True)
@@ -438,7 +504,8 @@ def query_gemini(transcript: str, flags: Dict[str, Any], session_context: Option
     - All arrays must contain at least 1 meaningful item (use an empty array [] if no items apply, but ensure the field is present)
     - All object fields must be present and non-empty, including all new fields (manipulation_assessment, argument_analysis, speaker_attitude, enhanced_understanding, quantitative_metrics, audio_analysis) and their sub-fields.
     """
-    gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    model = _choose_model(GEMINI_MODEL_STRUCTURED)
+    gemini_api_url = _build_generate_url(model)
 
     headers = {"Content-Type": "application/json"}
     payload = {
@@ -866,7 +933,8 @@ def transcribe_with_gemini(audio_path: str) -> str:
         Preserve the natural flow of speech including pauses where significant.
         """
 
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        model = _choose_model(GEMINI_MODEL_TRANSCRIBE)
+        gemini_api_url = _build_generate_url(model)
 
         headers = {"Content-Type": "application/json"}
         safety_settings = [
@@ -1003,7 +1071,8 @@ def analyze_emotions_with_gemini(audio_path: str, transcript: str) -> list:
         Return only the JSON array, no other text.
         """
 
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        model = _choose_model(GEMINI_MODEL_ANALYSIS)
+        gemini_api_url = _build_generate_url(model)
 
         headers = {"Content-Type": "application/json"}
         payload = {
@@ -1163,7 +1232,8 @@ def audio_analysis_gemini(audio_path: str, transcript: str, flags: Dict[str, Any
         Return a structured JSON response with audio analysis findings.
         """
         
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+        model = _choose_model(GEMINI_MODEL_ANALYSIS)
+        gemini_api_url = _build_generate_url(model)
         headers = {"Content-Type": "application/json"}
         payload = {
             "contents": [{
@@ -1210,81 +1280,43 @@ def audio_analysis_gemini(audio_path: str, transcript: str, flags: Dict[str, Any
         return get_fallback_audio_analysis(f"Audio analysis exception: {str(e)}")
 
 
-# Add necessary imports for the new pipeline
-# Placeholder for GeminiService if not already defined in this file
 class GeminiService:
-    async def query_gemini_for_raw_json(self, prompt: str) -> Optional[Dict[str, Any]]:
-        """
-        Placeholder for the actual Gemini API call that returns a parsed JSON dictionary.
-        This method is expected by the individual analysis services.
-        The real implementation would call the Gemini API with the prompt
-        and parse the response to extract a JSON object.
-        """
-        logger.info(f"GeminiService.query_gemini_for_raw_json called with prompt (first 100 chars): {prompt[:100]}...")
-        # This is a simplified placeholder.
-        # A real implementation would use 'requests' or 'aiohttp' to call the Gemini API
-        # and then parse the JSON from the response.
-        # For now, it simulates a successful call returning None, relying on service fallbacks.
-        # To make services actually work, this needs to be implemented.
-        
-        # Simulate a call to a generic Gemini text generation endpoint
-        # that is expected to return a JSON string.
-        
-        # This is a conceptual representation. The actual API call structure
-        # (endpoint, payload, headers) depends on the specific Gemini model and task.
-        # For example, if using a model that directly outputs JSON:
-        gemini_api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        headers = {"Content-Type": "application/json"}
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "response_mime_type": "application/json", # Request JSON output
-                "temperature": 0.2, # Lower temperature for more deterministic JSON structure
-                "maxOutputTokens": 2048 
-            }
-        }
-        
-        try:
-            # In a real async service, you'd use an async HTTP client
-            # For simplicity in this synchronous placeholder within an async function context:
-            # We'll log and return None, services should have fallbacks.
-            # To truly make this work, this part needs to be async and use aiohttp or similar.
-            
-            # This is a conceptual synchronous call for placeholder purposes
-            # response = requests.post(gemini_api_url, headers=headers, data=json.dumps(payload))
-            # if response.status_code == 200:
-            #     response_json = response.json()
-            #     text_content = extract_text_from_gemini_response(response_json) # Assuming this extracts the string that is JSON
-            #     if text_content:
-            #         return safe_json_parse(text_content) # Parses the string to dict
-            #     else:
-            #         logger.warning("GeminiService: No text content in response to parse for JSON.")
-            #         return None
-            # else:
-            #     logger.error(f"GeminiService: API error {response.status_code} - {response.text}")
-            #     return None
-            logger.warning("GeminiService.query_gemini_for_raw_json: Placeholder returning None. Implement actual API call.")
-            return None # Services will use their fallbacks
-        except Exception as e:
-            logger.error(f"GeminiService.query_gemini_for_raw_json error: {e}", exc_info=True)
-            return None
+    """Async wrapper exposing Gemini-related operations.
 
-from backend.models import (
-    ManipulationAssessment, ArgumentAnalysis, SpeakerAttitude, EnhancedUnderstanding,
-    PsychologicalAnalysis, AudioAnalysis, InteractionMetrics, ConversationFlow,
-    EmotionDetail, LinguisticAnalysis # Make sure these are the correct model names
-)
-from backend.services.manipulation_service import ManipulationService
-from backend.services.argument_service import ArgumentService
-from backend.services.speaker_attitude_service import SpeakerAttitudeService
-from backend.services.enhanced_understanding_service import EnhancedUnderstandingService
-from backend.services.psychological_service import PsychologicalService
-from backend.services.audio_analysis_service import AudioAnalysisService
-from backend.services.quantitative_metrics_service import QuantitativeMetricsService
-from backend.services.conversation_flow_service import ConversationFlowService
-# from backend.services.linguistic_service import analyze_linguistic_patterns # Causes circular import - import locally where needed
-# transcribe_with_gemini and analyze_emotions_with_gemini should be defined in this file or imported.
-# Assuming they are defined later in this file as per previous context.
+    This small wrapper delegates to the module-level helper functions already
+    implemented in this file. It ensures a consistent async interface so
+    analysis services can await calls without needing to know whether the
+    underlying implementation is sync or async.
+    """
+    async def query_gemini_for_raw_json(self, prompt: str, max_output_tokens: int = 2048) -> Optional[Dict[str, Any]]:
+        # If a truly async implementation exists above, call it directly.
+        try:
+            # There is an async function defined earlier named query_gemini_for_raw_json
+            # that performs an async httpx call. Call it if present.
+            if 'query_gemini_for_raw_json' in globals() and asyncio.iscoroutinefunction(globals()['query_gemini_for_raw_json']):
+                return await globals()['query_gemini_for_raw_json'](prompt, max_output_tokens)
+        except Exception:
+            logger.debug("Delegated async query_gemini_for_raw_json failed, falling back to sync wrapper.", exc_info=True)
+
+        # Fallback: run any sync implementation in a thread
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, lambda: None)
+
+    async def transcribe(self, audio_path: str) -> str:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, transcribe_with_gemini, audio_path)
+
+    async def analyze_audio(self, audio_path: str, transcript: str, flags: Dict[str, Any], session_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, query_gemini_with_audio, audio_path, transcript, flags, session_context)
+
+    async def analyze_emotions(self, audio_path: str, transcript: str) -> list:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, analyze_emotions_with_gemini, audio_path, transcript)
+
+    async def analyze_audio_structured(self, audio_path: str, transcript: str, flags: Dict[str, Any], session_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, audio_analysis_gemini, audio_path, transcript, flags, session_context)
 
 async def full_audio_analysis_pipeline(
     audio_path: str,
@@ -1321,31 +1353,40 @@ async def full_audio_analysis_pipeline(
     # Import locally to avoid circular import at module level
     from backend.services.linguistic_service import analyze_linguistic_patterns
 
-    analysis_tasks = {
-        "manipulation_assessment": manipulation_service.analyze(transcript_text, session_context),
-        "argument_analysis": argument_service.analyze(transcript_text, session_context),
-        "speaker_attitude": speaker_attitude_service.analyze(transcript_text, session_context),
-        "enhanced_understanding": enhanced_understanding_service.analyze(transcript_text, session_context),
-        "psychological_analysis": psychological_service.analyze(transcript_text, session_context),
-        "audio_analysis": audio_analysis_svc.analyze(audio_path, transcript_text, session_context),
-        "quantitative_metrics": quantitative_metrics_service.analyze(transcript_text, session_context),
-        "conversation_flow": conversation_flow_service.analyze(transcript_text, session_context),
-        # Assuming analyze_emotions_with_gemini and analyze_linguistic_patterns are synchronous
-        "emotion_analysis": loop.run_in_executor(None, analyze_emotions_with_gemini, audio_path, transcript_text),
-        "linguistic_analysis": loop.run_in_executor(None, analyze_linguistic_patterns, transcript_text)
+    async def _call_async_or_thread(func, *a, **kw):
+        """Call `func` as a coroutine if it's async, otherwise run it in a threadpool."""
+        if inspect.iscoroutinefunction(func):
+            return await func(*a, **kw)
+        # If func is already a coroutine object, await it
+        if inspect.iscoroutine(func):
+            return await func
+        # Otherwise run in threadpool
+        return await loop.run_in_executor(None, functools.partial(func, *a, **kw))
+
+    task_map = {
+        "manipulation_assessment": (manipulation_service.analyze, (transcript_text, session_context)),
+        "argument_analysis": (argument_service.analyze, (transcript_text, session_context)),
+        "speaker_attitude": (speaker_attitude_service.analyze, (transcript_text, session_context)),
+        "enhanced_understanding": (enhanced_understanding_service.analyze, (transcript_text, session_context)),
+        "psychological_analysis": (psychological_service.analyze, (transcript_text, session_context)),
+        "audio_analysis": (audio_analysis_svc.analyze, (audio_path, transcript_text, session_context)),
+        "quantitative_metrics": (quantitative_metrics_service.get_numerical_linguistic_metrics, (transcript_text, session_context.get('audio_duration_seconds') if session_context else None)),
+        "interaction_metrics": (quantitative_metrics_service.analyze_interaction_metrics, (transcript_text, session_context.get('speaker_diarization') if session_context else None, session_context.get('sentiment_trend') if session_context else None, session_context.get('audio_duration_seconds') if session_context else None)),
+        "conversation_flow": (conversation_flow_service.analyze, (transcript_text, session_context)),
+        "emotion_analysis": (analyze_emotions_with_gemini, (audio_path, transcript_text)),
+        "linguistic_analysis": (analyze_linguistic_patterns, (transcript_text,))
     }
 
+    # Create asyncio tasks for all analysis calls, wrapping sync calls in threadpool
+    async_tasks = {k: asyncio.create_task(_call_async_or_thread(func, *args)) for k, (func, args) in task_map.items()}
     results = {}
-    gathered_results = await asyncio.gather(*analysis_tasks.values(), return_exceptions=True)
-    
-    result_keys = list(analysis_tasks.keys())
-    for i, key in enumerate(result_keys):
-        if isinstance(gathered_results[i], Exception):
-            logger.error(f"Error in analysis task '{key}': {gathered_results[i]}", exc_info=gathered_results[i])
-            # Fallback to None or default model instance (services should handle this internally)
-            results[key] = None # Or a default object if known
+    gathered = await asyncio.gather(*async_tasks.values(), return_exceptions=True)
+    for key, value in zip(async_tasks.keys(), gathered):
+        if isinstance(value, Exception):
+            logger.error(f"Error in analysis task '{key}': {value}", exc_info=value)
+            results[key] = None
         else:
-            results[key] = gathered_results[i]
+            results[key] = value
 
     final_analysis_data = {
         "transcript": transcript_text,

@@ -5,6 +5,7 @@ from pathlib import Path
 
 # Load environment variables from a .env file if present (fall back to repo root)
 repo_env = Path(__file__).resolve().parents[1] / '.env'
+print(f"Looking for .env file at: {repo_env}")
 if repo_env.exists():
     dotenv.load_dotenv(str(repo_env))
 else:
@@ -20,6 +21,25 @@ logger = logging.getLogger(__name__)
 # The fallback key "your_fallback_key_here_or_None" is a placeholder and should be replaced
 # or removed if you ensure the environment variable is always set.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# Gemini model selection (override via environment variable if needed)
+# Common options include: "gemini-1.5", "gemini-1.5-research", "text-bison-001" depending on availability.
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
+
+# Per-task Gemini model configuration (can be overridden via environment variables)
+# Recommended defaults based on project guidance:
+# - Transcription: gemini-3.5-flash (fast, audio-capable)
+# - Structured/analysis: gemini-2.5 (strong structured output)
+GEMINI_MODEL_TRANSCRIBE = os.getenv("GEMINI_MODEL_TRANSCRIBE", "gemini-2.5-flash-lite")
+GEMINI_MODEL_ANALYSIS = os.getenv("GEMINI_MODEL_ANALYSIS", "gemini-2.5-pro")
+GEMINI_MODEL_STRUCTURED = os.getenv("GEMINI_MODEL_STRUCTURED", "gemini-2.5-pro")
+
+# Comma-separated list of fallback models to try (in order) when preferred model is unavailable.
+# Put pro first, then flash-lite, then flash, then general aliases.
+_fallback_env = os.getenv(
+    "GEMINI_FALLBACK_MODELS",
+    "gemini-2.5-pro,gemini-2.5-flash-lite,gemini-2.5-flash,gemini-flash-latest,gemini-2.5,gemini-1.5",
+)
+GEMINI_FALLBACK_MODELS = [m.strip() for m in _fallback_env.split(",") if m.strip()]
 
 # Initialize the emotion classifier pipeline lazily and make the import optional
 # so the backend can be imported even if `transformers` isn't installed.

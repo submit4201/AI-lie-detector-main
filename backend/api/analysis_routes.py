@@ -22,11 +22,24 @@ from backend.services.linguistic_service import analyze_linguistic_patterns
 from backend.services.session_service import conversation_history_service
 from backend.services.session_insights_service import SessionInsightsGenerator
 from backend.services.streaming_service import analysis_streamer, stream_analysis_pipeline
+from backend.services.v2_services.gemini_client import GeminiClientV2
+from backend.services.v2_services.runner import V2AnalysisRunner
+from backend.services.v2_services.streaming import stream_runner_events
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 session_insights_generator = SessionInsightsGenerator()
+
+
+def _build_v2_meta(session_id: str, audio: UploadFile, file_size: int) -> Dict[str, Any]:
+    return {
+        "session_id": session_id,
+        "filename": audio.filename,
+        "content_type": audio.content_type,
+        "audio_mime_type": audio.content_type,
+        "file_size": file_size,
+    }
 
 @router.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
@@ -47,6 +60,85 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                 break
     except WebSocketDisconnect:
         analysis_streamer.disconnect(session_id)
+
+
+@router.post(
+    "/v2/analyze",
+    tags=["Analysis"],
+    summary="Analyze audio using the v2 service pipeline",
+)
+async def analyze_audio_v2(
+    audio: UploadFile = File(...),
+    session_id_form: Optional[str] = Form(None, alias="session_id"),
+    transcript_override: Optional[str] = Form(None, alias="transcript"),
+):
+    session_id = conversation_history_service.get_or_create_session(session_id_form)
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Audio file is empty")
+
+    meta = _build_v2_meta(session_id, audio, len(audio_bytes))
+    runner = V2AnalysisRunner(gemini_client=GeminiClientV2())
+
+    try:
+        result = await runner.run(transcript_override or "", audio_bytes, meta)
+        conversation_history_service.add_analysis(
+            session_id,
+            result.get("transcript", ""),
+            result,
+        )
+        return result
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.error("/v2/analyze failed", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@router.post(
+    "/v2/analyze/stream",
+    tags=["Analysis"],
+    summary="Stream v2 analysis results as Server-Sent Events",
+)
+async def stream_analyze_audio_v2(
+    audio: UploadFile = File(...),
+    session_id_form: Optional[str] = Form(None, alias="session_id"),
+    transcript_override: Optional[str] = Form(None, alias="transcript"),
+):
+    session_id = conversation_history_service.get_or_create_session(session_id_form)
+    audio_bytes = await audio.read()
+    if not audio_bytes:
+        raise HTTPException(status_code=400, detail="Audio file is empty")
+
+    meta = _build_v2_meta(session_id, audio, len(audio_bytes))
+    runner = V2AnalysisRunner(gemini_client=GeminiClientV2())
+
+    async def _on_event(event: Dict[str, Any]):
+        if event.get("event") == "analysis.done":
+            payload = event.get("payload", {})
+            conversation_history_service.add_analysis(
+                session_id,
+                payload.get("transcript", ""),
+                payload,
+            )
+
+    event_stream = stream_runner_events(
+        runner,
+        transcript=transcript_override or "",
+        audio=audio_bytes,
+        meta=meta,
+        on_event=_on_event,
+    )
+
+    return StreamingResponse(
+        event_stream,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+        },
+    )
 
 @router.post(
     "/analyze/stream",

@@ -263,14 +263,18 @@ class AudioAnalysis(BaseModel):
 
 
 class InteractionMetrics(BaseModel):  # Renamed from QuantitativeMetrics
-    talk_to_listen_ratio: Optional[float] = Field(default=None, description="Ratio of talking time for a primary speaker to total speaking time or to other speakers' time. Context-dependent."
-    )
-    speaker_turn_duration_avg_seconds: Optional[float] = Field(default=None, description="Average duration of speaker turns in seconds, if speaker diarization is available."
-    )
-    interruptions_count: Optional[int] = Field(default=None, description="Number of interruptions detected, typically requiring diarization or explicit markers."
-    )
-    sentiment_trend: List[Dict[str, Any]] = Field(default_factory=list, description="Trend of sentiment over time or segments, e.g., [{'segment': 'opening', 'sentiment_score': 0.7, 'sentiment_label': 'positive'}]."
-    )
+    talk_to_listen_ratio: Optional[float] = Field(default=None, description="Ratio of talking time for a primary speaker to total speaking time or to other speakers' time. Context-dependent.")
+    speaker_turn_duration_avg_seconds: Optional[float] = Field(default=None, description="Average duration of speaker turns in seconds, if speaker diarization is available.")
+    interruptions_count: Optional[int] = Field(default=None, description="Number of interruptions detected, typically requiring diarization or explicit markers.")
+    sentiment_trend: List[Dict[str, Any]] = Field(default_factory=list, description="Trend of sentiment over time or segments, e.g., [{'segment': 'opening', 'sentiment_score': 0.7, 'sentiment_label': 'positive'}].")
+    overall_sentiment_label: Optional[str] = Field(default=None, description="Dominant sentiment classification inferred from the interaction (e.g., positive, neutral, negative).")
+    overall_sentiment_score: Optional[float] = Field(default=None, description="Normalized sentiment score between 0 and 1 where 0 is negative and 1 is positive.")
+    sentiment_confidence: Optional[float] = Field(default=None, description="Confidence score for the dominant sentiment between 0 and 1.")
+    emotion_distribution: List[Dict[str, Any]] = Field(default_factory=list, description="Distribution of notable emotions with optional scores or weights.")
+    engagement_level: Optional[str] = Field(default=None, description="Qualitative engagement assessment such as Low, Medium, or High.")
+    question_to_statement_ratio: Optional[float] = Field(default=None, description="Ratio of interrogative sentences to declarative statements.")
+    conversation_energy_score: Optional[float] = Field(default=None, description="Relative measure (0-1) of conversational energy inferred from pacing, punctuation, and emphasis cues.")
+    notable_interaction_events: List[str] = Field(default_factory=list, description="List of notable behaviors observed (e.g., 'frequent interruptions', 'high filler usage').")
     # Removed word_count and vocabulary_richness_score as they are in NumericalLinguisticMetrics
 
 class ConversationFlow(BaseModel):

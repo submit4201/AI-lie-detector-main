@@ -1,4 +1,4 @@
-from backend.models import ConversationFlow
+from backend.models import ConversationFlow, ErrorResponse
 from typing import List, Dict, Optional, Any, TYPE_CHECKING
 import json
 
@@ -192,6 +192,20 @@ IMPORTANT: Your entire response must be only the JSON object, with no surroundin
             response_json_str = await self.gemini_service.query_gemini_for_raw_json(prompt)
             response_data = json.loads(response_json_str)
             
+            if not isinstance(response_data, dict):
+                raise ErrorResponse(
+                    message=f"in Conversation Flow Analysis: Expected a JSON object in response. got {type(response_data)}",
+                    status_code=500,
+                    details={"response_data": response_data},
+                    suggestion="Ensure the LLM returns a valid JSON object with all required fields so that we handle the data with care and defaults.",
+                    user_friendly_message="An error occurred while analyzing the conversation flow. Please try again later.",
+                    severity="critical",
+                    location="ConversationFlowService.analyze_conversation_flow",
+                    documentation_link="https://docs.example.com/errors#ConversationFlowAnalysisError"
+                )
+            
+            
+            
             # Ensure all expected fields are present in the response
             expected_fields = [
                 "turn_taking_frequency", "topic_shifts", "conversation_depth",
@@ -203,16 +217,29 @@ IMPORTANT: Your entire response must be only the JSON object, with no surroundin
                 "summary_of_flow_analysis", "flow_disruptions_analysis", "flow_enhancers_analysis"
             ]
             
+            # check response_data keys
+            for field in expected_fields:
+                if field not in response_data:
+                    print(f"Missing field in response: {field}")
+                if field in response_data:
+                    print(f"Field '{field}' present with value: {response_data[field]}")
+                    
+            
             # Fill missing fields with default values
             for field in expected_fields:
                 if field not in response_data:
-                    if "analysis" in field or field in ["summary_of_flow", "turn_taking_frequency", "topic_shifts", "conversation_depth", "engagement_levels", "conversation_balance", "clarity_and_coherence"]:
-                        response_data[field] = "N/A"  # Default for analysis and summary fields
-                    elif field in ["flow_disruptions", "flow_enhancers"]:
-                        response_data[field] = []  # Default to empty list
-                    else:
-                        response_data[field] = "Could not determine"  # Generic default
-
+                    error = ErrorResponse(
+                        message=f"in Conversation Flow Analysis: Missing field '{field}' in response.",
+                        status_code=500,
+                        details={"response_data": response_data},
+                        suggestion=f"Ensure the LLM returns all required fields including '{field}'.",
+                        user_friendly_message="An error occurred while analyzing the conversation flow. Please try again later.",
+                        severity="critical",
+                        location="ConversationFlowService.analyze_conversation_flow",
+                        documentation_link="https://docs.example.com/errors#ConversationFlowAnalysisError"
+                    )
+                    response_data[field] = f"return with field missing {error}"
+                    
             return ConversationFlow(
                 engagement_level=response_data.get("engagement_levels", "Analysis not available"),
                 topic_coherence_score=response_data.get("topic_coherence_score", 0.0),
