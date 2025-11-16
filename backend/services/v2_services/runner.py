@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 import logging
+from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List, AsyncGenerator, Tuple
 
 from backend.services.v2_services.analysis_protocol import AnalysisService
@@ -10,6 +11,35 @@ from backend.services.v2_services.gemini_client import GeminiClientV2
 from backend.services.v2_services.service_registry import build_service_instances, ServiceFactory, REGISTERED_SERVICES
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AnalysisContext:
+    """Central context object for v2 analysis pipeline.
+    
+    This dataclass holds all state for a single analysis request,
+    avoiding global mutable state. Services receive this via meta["analysis_context"].
+    """
+    # Transcript state
+    transcript_partial: str = ""
+    transcript_final: Optional[str] = None
+    
+    # Audio state
+    audio_bytes: Optional[bytes] = None
+    audio_summary: Dict[str, Any] = field(default_factory=dict)
+    
+    # Metrics and analysis results
+    quantitative_metrics: Dict[str, Any] = field(default_factory=dict)
+    service_results: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    
+    # Speaker and diarization
+    speaker_segments: List[Dict[str, Any]] = field(default_factory=list)
+    
+    # Session context (compact, privacy-safe)
+    session_summary: Optional[Dict[str, Any]] = None
+    
+    # Configuration flags
+    config: Dict[str, Any] = field(default_factory=dict)
 
 
 class V2AnalysisRunner:

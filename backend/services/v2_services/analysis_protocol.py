@@ -13,12 +13,19 @@ class AnalysisResult(Dict[str, Any]):
 class AnalysisService(ABC):
     """Abstract interface for analysis services.
 
-    Implementations should provide an async `analyze` method that accepts
-    a transcript (string), optional raw audio bytes, and a metadata dict,
-    then returns a dictionary of structured analysis results.
-
-    Optionally services can implement `stream_analyze` to yield partial
-    results as they become available.
+    The v2 protocol is streaming-first: `stream_analyze` is the primary method
+    that yields incremental results. The `analyze` method is a convenience wrapper
+    that consumes the full stream and returns the final result.
+    
+    Each result dict must include:
+    - service_name: str
+    - service_version: str
+    - local: dict (local/computed metrics)
+    - gemini: dict (LLM-generated insights)
+    - errors: list
+    - partial: bool (True for intermediate chunks, False for final)
+    - phase: str (e.g., "coarse", "refine", "final")
+    - chunk_index: int | None
     """   
     # required variables and methods for analysis services
     serviceName: str
@@ -32,25 +39,40 @@ class AnalysisService(ABC):
         self.meta: Dict[str, Any] = meta or {}
 
     @abstractmethod
-    async def analyze(self, transcript: str, audio: bytes, meta: Dict[str, Any]) -> AnalysisResult:
-        """Perform analysis and return a JSON-serializable dict.
+    async def stream_analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> AsyncGenerator[Dict[str, Any], None]:
+        """Primary method: async generator that yields partial and final results.
+        
+        Services should implement real streaming when possible. At minimum,
+        yield intermediate "coarse" results followed by a final result.
 
         Args:
             transcript: Transcript text (may be empty if audio/diarization provided).
             audio: Raw audio bytes or None.
-            meta: Optional additional metadata (duration, speaker info, config overrides).
+            meta: Metadata dict that includes "analysis_context" with AnalysisContext instance.
 
-        Returns:
-            A AnalysisResult dict with structured analysis data.
+        Yields:
+            Dicts with standardized v2 result shape including partial/phase/chunk_index.
         """
         raise NotImplementedError()
 
-    async def stream_analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> AsyncGenerator[Dict[str, Any], None]:
-        """Optional: async generator that yields partial results.
+    async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> AnalysisResult:
+        """Convenience method: consumes stream_analyze and returns final result.
 
-        Default implementation simply yields the full `analyze` result once.
+        Default implementation iterates through stream_analyze and returns
+        the last yielded result (which should have partial=False).
         """
-        result = await self.analyze(transcript, audio, meta)
-        yield result
+        result = None
+        async for chunk in self.stream_analyze(transcript, audio, meta):
+            result = chunk
+        return result or {
+            "service_name": self.serviceName,
+            "service_version": self.serviceVersion,
+            "local": {},
+            "gemini": None,
+            "errors": [{"error": "No results produced"}],
+            "partial": False,
+            "phase": "final",
+            "chunk_index": None,
+        }
 
     
