@@ -287,6 +287,141 @@ class GeminiClientV2:
             logger.error("Gemini structured query failed", exc_info=True)
             return create_fallback_response(str(e))
 
+    async def json_stream(
+        self,
+        prompt: str,
+        *,
+        schema: Optional[Dict[str, Any]] = None,
+        audio_bytes: Optional[bytes] = None,
+        context: Optional[Dict[str, Any]] = None,
+        model_hint: Optional[str] = None,
+    ):
+        """Stream structured JSON responses from Gemini.
+        
+        If Live JSON streaming is available, use it for real-time results.
+        Otherwise, simulate streaming by chunking a batch response.
+        
+        Args:
+            prompt: The prompt text
+            schema: Optional JSON schema for structured output
+            audio_bytes: Optional audio data to include
+            context: Optional context dict for enrichment
+            model_hint: Optional model preference
+            
+        Yields:
+            Dicts with {"data": partial_json, "chunk_index": i, "done": bool}
+        """
+        model_name = await self.choose_model(model_hint or GEMINI_MODEL_STRUCTURED)
+        
+        # Try Live streaming if available
+        try:
+            client = None
+            if hasattr(self._sdk_client, 'aio'):
+                client = self._sdk_client
+            elif hasattr(genai, 'Client'):
+                client = genai.Client(api_key=self.api_key)
+                
+            if client and hasattr(client, 'aio') and hasattr(client.aio, 'live') and hasattr(client.aio.live, 'chat'):
+                _types = getattr(client, 'types', None) or getattr(genai, 'types', None)
+                
+                # Build generation config with JSON schema if provided
+                config = {"response_mime_type": "application/json"}
+                if schema:
+                    config["response_schema"] = schema
+                
+                async with client.aio.live.chat.connect(model=model_name, config=config) as session:
+                    # Prepare content parts
+                    parts = []
+                    if _types:
+                        parts.append(_types.Content(parts=[_types.Part(text=prompt)]))
+                        if audio_bytes:
+                            blob = _types.Blob(mime_type='audio/wav', data=audio_bytes)
+                            parts.append(_types.Content(parts=[blob]))
+                    else:
+                        parts.append(prompt)
+                    
+                    await session.send_message(contents=parts)
+                    
+                    chunk_index = 0
+                    async for message in session.receive():
+                        if message.candidates:
+                            for candidate in message.candidates:
+                                if candidate.content and candidate.content.parts:
+                                    for part in candidate.content.parts:
+                                        if getattr(part, 'text', None):
+                                            text = part.text.strip()
+                                            try:
+                                                data = json.loads(text)
+                                                yield {
+                                                    "data": data,
+                                                    "chunk_index": chunk_index,
+                                                    "done": False
+                                                }
+                                                chunk_index += 1
+                                            except json.JSONDecodeError:
+                                                # Partial JSON, yield as-is
+                                                yield {
+                                                    "data": {"raw": text},
+                                                    "chunk_index": chunk_index,
+                                                    "done": False
+                                                }
+                                                chunk_index += 1
+                    
+                    # Final done marker
+                    yield {"data": {}, "chunk_index": chunk_index, "done": True}
+                    return
+        except Exception:
+            logger.debug("Live JSON streaming not available, falling back to simulated streaming", exc_info=True)
+        
+        # Fallback: simulate streaming with batch response
+        try:
+            if schema:
+                result = await self.query_json_schema(prompt, schema, model_hint=model_hint)
+            else:
+                result = await self.query_json(prompt, model_hint=model_hint)
+            
+            # Split result into 3-5 chunks to simulate streaming
+            if isinstance(result, dict):
+                keys = list(result.keys())
+                num_chunks = min(len(keys), 5)
+                chunk_size = max(1, len(keys) // num_chunks)
+                
+                for i in range(num_chunks):
+                    start_idx = i * chunk_size
+                    end_idx = start_idx + chunk_size if i < num_chunks - 1 else len(keys)
+                    chunk_keys = keys[start_idx:end_idx]
+                    chunk_data = {k: result[k] for k in chunk_keys}
+                    
+                    yield {
+                        "data": chunk_data,
+                        "chunk_index": i,
+                        "done": False
+                    }
+                    
+                    # Small delay to simulate streaming
+                    await asyncio.sleep(0.1)
+                
+                # Final chunk with all data
+                yield {
+                    "data": result,
+                    "chunk_index": num_chunks,
+                    "done": True
+                }
+            else:
+                # Non-dict result, yield as single chunk
+                yield {
+                    "data": result,
+                    "chunk_index": 0,
+                    "done": True
+                }
+        except Exception as e:
+            logger.error(f"JSON streaming failed: {e}", exc_info=True)
+            yield {
+                "data": {"error": str(e)},
+                "chunk_index": 0,
+                "done": True
+            }
+
     async def transcribe(self, audio_bytes: bytes, *, model_hint: Optional[str] = None, mime_type: Optional[str] = None) -> str:
         if not audio_bytes:
             return ""

@@ -39,7 +39,7 @@ class _FakeService(AnalysisService):
         self.delay = delay
         self.serviceVersion = "test-1.0"
 
-    async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]):
+    async def stream_analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]):
         if self.delay:
             await asyncio.sleep(self.delay)
 
@@ -54,9 +54,12 @@ class _FakeService(AnalysisService):
                     "question_to_statement_ratio": meta.get("question_ratio_override"),
                 }
             },
-            "errors": None,
+            "errors": [],
+            "partial": False,
+            "phase": "final",
+            "chunk_index": None,
         }
-        return payload
+        yield payload
 
 
 def _build_runner(
@@ -109,12 +112,17 @@ def test_runner_generates_transcript_when_missing():
 
 
 @pytest.mark.unit
-def test_stream_run_emits_incremental_events():
-    """stream_run should surface transcript, progress, and completion events in order."""
+def test_stream_run_emits_v2_events_for_services():
+    """stream_run should emit analysis.update per service and a final analysis.done payload.
+
+    This test targets the v2 event contract instead of the legacy
+    alpha/beta progress pattern. We verify that:
+    - each service produces at least one analysis.update event, and
+    - the final analysis.done event contains aggregated results and meta.
+    """
 
     runner = _build_runner(
         service_names=["alpha", "beta"],
-        delays={"beta": 0.01},
         gemini_client=_StubGeminiClient(transcript_text="hello world"),
     )
 
@@ -126,17 +134,12 @@ def test_stream_run_emits_incremental_events():
 
     events = asyncio.run(_collect_events())
 
-    assert events[0]["event"] == "analysis.update"
-    assert events[0]["service"] == "transcript"
+    # Last event must be the completion signal
     assert events[-1]["event"] == "analysis.done"
 
-    update_events = [evt for evt in events if evt["event"] == "analysis.update" and evt.get("service") != "transcript"]
+    update_events = [evt for evt in events if evt["event"] == "analysis.update"]
     assert {evt["service"] for evt in update_events} == {"alpha", "beta"}
 
-    progress_events = [evt for evt in events if evt["event"] == "analysis.progress"]
-    assert progress_events[-1]["completed"] == progress_events[-1]["total"] == 2
-
     aggregate = events[-1]["payload"]
-    assert aggregate["transcript"] == "stream me"
-    assert set(aggregate["services"].keys()) == {"alpha", "beta"}
-    assert aggregate["meta"]["transcript_auto_generated"] is False
+    assert set(aggregate["results"].keys()) == {"alpha", "beta"}
+    assert "meta" in aggregate
