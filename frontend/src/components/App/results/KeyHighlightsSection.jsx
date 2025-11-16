@@ -9,7 +9,7 @@ import {
   deriveRiskAssessmentFromServices,
   deriveSummaryFromServices,
   getServicesFromResult,
-} from "@/lib/serviceSelectors";
+} from "@/utils/serviceSelectors";
 
 // Utility function to truncate text
 const getConciseText = (text, maxLength = 80) => {

@@ -23,12 +23,15 @@ from typing import List, Dict, Optional, Any, TYPE_CHECKING, Tuple
 from backend.services.v2_services.analysis_protocol import AnalysisService
 import json
 import re
+import logging
 
 # Use TYPE_CHECKING to avoid circular import while keeping type hints
 if TYPE_CHECKING:
     from backend.services.gemini_service import GeminiService
 
 from backend.services.v2_services.gemini_client import GeminiClientV2 as DefaultGeminiClient
+
+logger = logging.getLogger(__name__)
 
 
 class QuantitativeMetricsService(AnalysisService):
@@ -54,8 +57,10 @@ class QuantitativeMetricsService(AnalysisService):
         self.gemini_client = gemini_client
         super().__init__(transcript=transcript, audio_data=audio_data, meta=meta)
         self.NumericalLinguisticMetrics = None
+        logger.info(f"QuantitativeMetricsService initialized for transcript of length {len(transcript or '')}")
 
     def _calculate_numerical_linguistic_metrics(self, text: str, audio_duration_seconds: Optional[float] = None) -> NumericalLinguisticMetrics:
+        logger.debug("Calculating numerical linguistic metrics...")
         words = re.findall(r'\b\w+\b', text.lower())
         word_count = len(words)
         unique_word_count = len(set(words))
@@ -253,15 +258,10 @@ class QuantitativeMetricsService(AnalysisService):
     ) -> InteractionMetrics:
         
         if not text and not speaker_diarization:
-            raise ErrorResponse(
-                message="Insufficient data for interaction metrics analysis: either transcript text or speaker diarization data must be provided.",
-                status_code=400,
-                details={},
-                suggestion="Provide at least the transcript text or speaker diarization data to perform interaction metrics analysis.",
-                user_friendly_message="Please provide the necessary data for analysis.",
-                severity="warning",
-                location="QuantitativeMetricsService.analyze_interaction_metrics",
-                documentation_link="https://docs.example.com/errors#InsufficientDataForInteractionMetrics"
+            logger.warning("Insufficient data for interaction metrics analysis.")
+            # Use a conventional exception rather than attempting to raise a Pydantic model
+            raise ValueError(
+                "Insufficient data: either transcript text or speaker diarization must be provided for interaction metrics."
             )
 
         diarization_summary = "Speaker diarization not available or not provided for this analysis."
@@ -320,10 +320,12 @@ class QuantitativeMetricsService(AnalysisService):
                     """
         
         try:
+            logger.info("Querying Gemini for interaction metrics.")
             # Use the v2 Gemini client for structured analysis
             raw_analysis = await self.gemini_client.query_json(prompt)
             if isinstance(raw_analysis, str):
                 # log that this came back as a string
+                logger.warning("LLM returned raw analysis as a string.")
                 print("LLM returned raw analysis as string.")
                 # try and fix the string to be valid json or dict
                 raw_text = raw_analysis.strip()
@@ -339,6 +341,7 @@ class QuantitativeMetricsService(AnalysisService):
                     raw_analysis = parsed
                 else:
                     # fall back
+                    logger.warning("Failed to parse string from LLM, falling back to local analysis.")
                     return self._fallback_interaction_analysis(text, speaker_diarization, sentiment_trend_data_input, audio_duration_seconds)
 
             if isinstance(raw_analysis, dict):
@@ -365,8 +368,10 @@ class QuantitativeMetricsService(AnalysisService):
                     notable_interaction_events=notable_events,
                 )
             else:
+                logger.warning("LLM analysis did not return a dictionary, falling back to local analysis.")
                 return self._fallback_interaction_analysis(text, speaker_diarization, sentiment_trend_data_input, audio_duration_seconds)
         except Exception as e:
+            logger.error(f"Error during LLM interaction metrics analysis: {e}", exc_info=True)
             print(f"Error during LLM interaction metrics analysis: {e}")
             return self._fallback_interaction_analysis(text, speaker_diarization, sentiment_trend_data_input, audio_duration_seconds)
 
@@ -374,6 +379,7 @@ class QuantitativeMetricsService(AnalysisService):
                                        speaker_diarization: Optional[List[Dict[str, Any]]] = None, 
                                        sentiment_trend_data_input: Optional[List[Dict[str, Any]]] = None,
                                        audio_duration_seconds: Optional[float] = None) -> InteractionMetrics:
+        logger.info("Performing fallback local interaction analysis.")
         talk_ratio = None
         avg_turn_duration = None
         interruptions = None
@@ -455,6 +461,7 @@ class QuantitativeMetricsService(AnalysisService):
     async def get_numerical_linguistic_metrics(self, text: str, audio_duration_seconds: Optional[float] = None) -> NumericalLinguisticMetrics:
         """Calculates and returns numerical linguistic metrics directly from text and optional audio duration."""
         if not text:
+            logger.warning("No text provided for numerical linguistic metrics, returning empty metrics.")
             return NumericalLinguisticMetrics() # Return default if no text
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
@@ -468,6 +475,8 @@ class QuantitativeMetricsService(AnalysisService):
         speaker_diarization = meta.get("speaker_diarization")
         sentiment_trend_data_input = meta.get("sentiment_trend")
         
+        logger.info(f"Starting v2 analysis for transcript. Duration: {audio_duration_seconds}s")
+        
         try:
             # Try to get Gemini analysis first
             interaction_metrics = await self.analyze_interaction_metrics(
@@ -478,8 +487,9 @@ class QuantitativeMetricsService(AnalysisService):
                 audio_duration_seconds=audio_duration_seconds,
             )
         except Exception as e:
+            logger.error(f"Interaction metrics analysis failed: {e}", exc_info=True)
             # Fallback to local-only analysis if Gemini fails
-            interaction_metrics = InteractionMetrics()
+            interaction_metrics = self._fallback_interaction_analysis(transcript or "", speaker_diarization, sentiment_trend_data_input, audio_duration_seconds)
             
         try:
             numerical_linguistic_metrics = await self.get_numerical_linguistic_metrics(
@@ -487,6 +497,7 @@ class QuantitativeMetricsService(AnalysisService):
                 audio_duration_seconds
             )
         except Exception as e:
+            logger.error(f"Numerical linguistic metrics calculation failed: {e}", exc_info=True)
             numerical_linguistic_metrics = NumericalLinguisticMetrics()
             
         return {

@@ -4,7 +4,7 @@ import {
   buildServiceAwareEmotionAnalysis,
   buildServiceBackedLinguisticAnalysis,
   getServicesFromResult,
-} from "@/lib/serviceSelectors";
+} from "@/utils/serviceSelectors";
 
 const TabButton = ({ isActive, onClick, children, icon }) => (
   <button

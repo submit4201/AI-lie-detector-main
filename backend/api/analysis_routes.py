@@ -79,7 +79,12 @@ async def analyze_audio_v2(
         raise HTTPException(status_code=400, detail="Audio file is empty")
 
     meta = _build_v2_meta(session_id, audio, len(audio_bytes))
-    runner = V2AnalysisRunner(gemini_client=GeminiClientV2())
+    try:
+        runner = V2AnalysisRunner(gemini_client=GeminiClientV2())
+    except Exception as exc:
+        logger.error("Failed to initialize V2AnalysisRunner", exc_info=True)
+        # Return a user-friendly message but log sanitized details
+        raise HTTPException(status_code=500, detail="Unable to initialize analysis runner. Please check server logs.")
 
     try:
         result = await runner.run(transcript_override or "", audio_bytes, meta)
@@ -110,7 +115,11 @@ async def stream_analyze_audio_v2(
         raise HTTPException(status_code=400, detail="Audio file is empty")
 
     meta = _build_v2_meta(session_id, audio, len(audio_bytes))
-    runner = V2AnalysisRunner(gemini_client=GeminiClientV2())
+    try:
+        runner = V2AnalysisRunner(gemini_client=GeminiClientV2())
+    except Exception as exc:
+        logger.error("Failed to initialize V2AnalysisRunner for streaming", exc_info=True)
+        raise HTTPException(status_code=500, detail="Unable to initialize streaming analysis runner. Please check server logs.")
 
     async def _on_event(event: Dict[str, Any]):
         if event.get("event") == "analysis.done":
@@ -178,10 +187,13 @@ async def stream_analyze_audio(
         # Get session context for the streaming pipeline
         session_context_data = conversation_history_service.get_session_context(current_session_id)
 
-        def cleanup_and_stream(temp_audio_path, session_id, session_context_data):
+        async def cleanup_and_stream(temp_audio_path, session_id, session_context_data):
             try:
-                yield from stream_analysis_pipeline(temp_audio_path, session_id, session_context_data)
+                # stream_analysis_pipeline is an async generator; iterate it asynchronously
+                async for chunk in stream_analysis_pipeline(temp_audio_path, session_id, session_context_data):
+                    yield chunk
             finally:
+                # Ensure the temp file is removed
                 if temp_audio_path and os.path.exists(temp_audio_path):
                     try:
                         os.unlink(temp_audio_path)

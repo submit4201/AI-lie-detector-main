@@ -151,9 +151,10 @@ const ControlPanel = ({
             </div>
             
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label htmlFor="streaming-checkbox" className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="checkbox"
+                  id="streaming-checkbox"
                   checked={useStreaming}
                   onChange={(e) => setUseStreaming(e.target.checked)}
                   className="w-4 h-4 rounded border-white/30 bg-white/10 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
@@ -180,8 +181,9 @@ const ControlPanel = ({
 
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex-1">
-              <label className="block text-white font-medium mb-3">Upload Audio File</label>
+              <label htmlFor="audio-upload" className="block text-white font-medium mb-3">Upload Audio File</label>
               <input
+                id="audio-upload"
                 type="file"
                 accept="audio/*"
                 onChange={(e) => setFile(e.target.files[0])}
