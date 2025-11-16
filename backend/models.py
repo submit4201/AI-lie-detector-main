@@ -417,3 +417,163 @@ class GeminiSummary(BaseModel):
     strengths: str = Field(default="Analysis not available", description="Strengths of the speaker's communication.")
 
 
+# Enhanced Acoustic Metrics Models
+class EnhancedAcousticMetrics(BaseModel):
+    """Comprehensive acoustic features for advanced voice analysis."""
+    # Pitch-related metrics
+    pitch_jitter: float = Field(default=0.0, description="F0 cycle deviation - variation in fundamental frequency period.")
+    pitch_shimmer: float = Field(default=0.0, description="Amplitude instability between consecutive periods.")
+    pitch_mean: float = Field(default=0.0, description="Mean fundamental frequency (F0) in Hz.")
+    pitch_std: float = Field(default=0.0, description="Standard deviation of fundamental frequency.")
+    pitch_range: float = Field(default=0.0, description="Range of pitch values (max - min) in Hz.")
+    
+    # Vocal tremor
+    vocal_tremor_rate: Optional[float] = Field(default=None, description="Rate of vocal tremor in Hz (if detected).")
+    vocal_tremor_intensity: Optional[float] = Field(default=None, description="Intensity of vocal tremor (0.0-1.0).")
+    
+    # Formant dispersion (F1/F2/F3)
+    formant_f1_mean: float = Field(default=0.0, description="Mean first formant frequency in Hz.")
+    formant_f2_mean: float = Field(default=0.0, description="Mean second formant frequency in Hz.")
+    formant_f3_mean: float = Field(default=0.0, description="Mean third formant frequency in Hz.")
+    formant_dispersion: float = Field(default=0.0, description="Dispersion across formants (measure of vowel space).")
+    formant_std: float = Field(default=0.0, description="Standard deviation of formant values.")
+    formant_range: float = Field(default=0.0, description="Range of formant values.")
+    
+    # Intensity and loudness
+    intensity_mean: float = Field(default=0.0, description="Mean intensity in dB.")
+    intensity_std: float = Field(default=0.0, description="Standard deviation of intensity.")
+    intensity_range: float = Field(default=0.0, description="Range of intensity values.")
+    intensity_slope: Optional[float] = Field(default=None, description="Slope of intensity curve over time.")
+    loudness_mean: float = Field(default=0.0, description="Mean loudness in sones.")
+    loudness_std: float = Field(default=0.0, description="Standard deviation of loudness.")
+    loudness_range: float = Field(default=0.0, description="Range of loudness values.")
+    loudness_slope: Optional[float] = Field(default=None, description="Slope of loudness curve over time.")
+    
+    # Pause characteristics
+    pause_duration_total: float = Field(default=0.0, description="Total duration of unfilled pauses in seconds.")
+    pause_count: int = Field(default=0, description="Number of detected pauses.")
+    pause_duration_mean: float = Field(default=0.0, description="Mean pause duration in seconds.")
+    pause_duration_std: float = Field(default=0.0, description="Standard deviation of pause durations.")
+    pause_rate: float = Field(default=0.0, description="Pauses per minute.")
+    
+    # Speech rate
+    speech_rate_wpm: float = Field(default=0.0, description="Speech rate in words per minute.")
+    speech_rate_sps: float = Field(default=0.0, description="Speech rate in syllables per second.")
+    articulation_rate: float = Field(default=0.0, description="Articulation rate (syllables/sec excluding pauses).")
+    
+    # Harmonics-to-Noise Ratio (HNR)
+    hnr_mean: float = Field(default=0.0, description="Mean harmonics-to-noise ratio in dB.")
+    hnr_std: float = Field(default=0.0, description="Standard deviation of HNR.")
+    hnr_range: float = Field(default=0.0, description="Range of HNR values.")
+    
+    # Energy metrics
+    energy_mean: float = Field(default=0.0, description="Mean energy.")
+    energy_std: float = Field(default=0.0, description="Standard deviation of energy.")
+    energy_range: float = Field(default=0.0, description="Range of energy values.")
+    
+    # Point process metrics
+    point_process_mean: float = Field(default=0.0, description="Mean point process value.")
+    point_process_std: float = Field(default=0.0, description="Standard deviation of point process.")
+    point_process_range: float = Field(default=0.0, description="Range of point process values.")
+    
+    # Quality indicators
+    voice_quality_score: float = Field(default=0.0, description="Overall voice quality score (0.0-1.0).")
+    signal_to_noise_ratio: float = Field(default=0.0, description="Signal-to-noise ratio in dB.")
+
+
+# Linguistic Enhancement Metrics
+class LinguisticEnhancementMetrics(BaseModel):
+    """Enhanced linguistic features for detailed text analysis."""
+    # Pronoun analysis
+    pronoun_ratio_first_person: float = Field(default=0.0, description="Ratio of first-person pronouns (I/me/my) to total words.")
+    pronoun_count_first_person: int = Field(default=0, description="Count of first-person pronouns.")
+    pronoun_ratio_second_person: float = Field(default=0.0, description="Ratio of second-person pronouns (you/your) to total words.")
+    pronoun_ratio_third_person: float = Field(default=0.0, description="Ratio of third-person pronouns (he/she/they) to total words.")
+    
+    # Article usage
+    article_usage_ratio: float = Field(default=0.0, description="Ratio of articles (a/an/the) to total words.")
+    article_count: int = Field(default=0, description="Count of articles.")
+    definite_article_ratio: float = Field(default=0.0, description="Ratio of definite articles (the) to total articles.")
+    
+    # Sentence complexity
+    sentence_complexity_score: float = Field(default=0.0, description="Sentence complexity score (0.0-1.0).")
+    avg_clause_per_sentence: float = Field(default=0.0, description="Average number of clauses per sentence.")
+    subordinate_clause_ratio: float = Field(default=0.0, description="Ratio of subordinate clauses to total sentences.")
+    
+    # Emotional leakage
+    emotional_leakage_words: List[str] = Field(default_factory=list, description="Detected emotional leakage words.")
+    emotional_leakage_count: int = Field(default=0, description="Count of emotional leakage words.")
+    emotional_leakage_ratio: float = Field(default=0.0, description="Ratio of emotional leakage words to total words.")
+    
+    # Response latency (requires timestamp tracking)
+    response_latency_mean: Optional[float] = Field(default=None, description="Mean response latency in seconds.")
+    response_latency_std: Optional[float] = Field(default=None, description="Standard deviation of response latency.")
+    
+    # Prosodic congruence (acoustic-linguistic mismatch)
+    prosodic_congruence_score: Optional[float] = Field(default=None, description="Prosodic congruence score (0.0-1.0).")
+    prosodic_mismatches: List[str] = Field(default_factory=list, description="Detected prosodic-linguistic mismatches.")
+
+
+# Baseline Profile for User Calibration
+class BaselineProfile(BaseModel):
+    """User baseline profile for normalization and calibration."""
+    user_id: Optional[str] = Field(default=None, description="User identifier.")
+    session_id: Optional[str] = Field(default=None, description="Calibration session identifier.")
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Profile creation timestamp.")
+    
+    # Acoustic baselines
+    baseline_pitch_mean: float = Field(default=0.0, description="Baseline mean pitch.")
+    baseline_pitch_std: float = Field(default=0.0, description="Baseline pitch standard deviation.")
+    baseline_intensity_mean: float = Field(default=0.0, description="Baseline mean intensity.")
+    baseline_speech_rate: float = Field(default=0.0, description="Baseline speech rate (WPM).")
+    baseline_pause_rate: float = Field(default=0.0, description="Baseline pause rate.")
+    baseline_hnr_mean: float = Field(default=0.0, description="Baseline HNR mean.")
+    
+    # Linguistic baselines
+    baseline_hesitation_rate: float = Field(default=0.0, description="Baseline hesitation rate.")
+    baseline_filler_rate: float = Field(default=0.0, description="Baseline filler word rate.")
+    baseline_pronoun_ratio: float = Field(default=0.0, description="Baseline first-person pronoun ratio.")
+    baseline_complexity_score: float = Field(default=0.0, description="Baseline sentence complexity.")
+    
+    # Statistical measures for normalization
+    calibration_samples: int = Field(default=0, description="Number of samples used for calibration.")
+    confidence_level: float = Field(default=0.0, description="Confidence in baseline profile (0.0-1.0).")
+
+
+# Credibility Score with Confidence Intervals
+class CredibilityScore(BaseModel):
+    """Comprehensive credibility assessment with statistical confidence."""
+    # Overall credibility
+    credibility_score: float = Field(default=0.0, description="Overall credibility score (0.0-1.0).")
+    credibility_level: str = Field(default="Unknown", description="Credibility level (Low/Medium/High/Inconclusive).")
+    
+    # Confidence intervals
+    confidence_interval_lower: float = Field(default=0.0, description="Lower bound of 95% confidence interval.")
+    confidence_interval_upper: float = Field(default=1.0, description="Upper bound of 95% confidence interval.")
+    confidence_level: float = Field(default=0.0, description="Confidence in the assessment (0.0-1.0).")
+    
+    # Component scores (weighted)
+    acoustic_score: float = Field(default=0.0, description="Acoustic analysis component score.")
+    linguistic_score: float = Field(default=0.0, description="Linguistic analysis component score.")
+    behavioral_score: float = Field(default=0.0, description="Behavioral patterns component score.")
+    consistency_score: float = Field(default=0.0, description="Internal consistency component score.")
+    
+    # Statistical measures
+    z_score: float = Field(default=0.0, description="Z-score relative to baseline.")
+    mad_score: float = Field(default=0.0, description="Median Absolute Deviation score.")
+    outlier_flags: List[str] = Field(default_factory=list, description="Detected outlier metrics.")
+    
+    # Inconclusive detection
+    is_inconclusive: bool = Field(default=False, description="Whether the assessment is inconclusive.")
+    inconclusive_reasons: List[str] = Field(default_factory=list, description="Reasons for inconclusive assessment.")
+    
+    # Explanation
+    explanation: str = Field(default="", description="Detailed explanation of the credibility assessment.")
+    contributing_factors: List[Dict[str, Any]] = Field(default_factory=list, description="Factors contributing to the score.")
+    risk_indicators: List[str] = Field(default_factory=list, description="Identified risk indicators.")
+    
+    # EMA smoothing (for real-time updates)
+    ema_smoothed_score: Optional[float] = Field(default=None, description="EMA smoothed credibility score.")
+    ema_alpha: Optional[float] = Field(default=None, description="EMA smoothing parameter used.")
+
+
