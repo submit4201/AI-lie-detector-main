@@ -10,3 +10,4 @@ anyio>=3.6,<5
 pydantic
 python-dotenv
 pydub
+numpy
