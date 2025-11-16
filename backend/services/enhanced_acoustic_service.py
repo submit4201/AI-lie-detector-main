@@ -6,7 +6,13 @@ Integrates parselmouth-based acoustic feature extraction with the analysis pipel
 import numpy as np
 from typing import Optional, Dict, Any, List
 from backend.models import EnhancedAcousticMetrics
-from backend.layer_2_feature_extraction import extract_acoustic_features_from_data
+
+# Optional import of layer_2_feature_extraction (may have heavy dependencies)
+try:
+    from backend.layer_2_feature_extraction import extract_acoustic_features_from_data
+    ACOUSTIC_EXTRACTION_AVAILABLE = True
+except ImportError:
+    ACOUSTIC_EXTRACTION_AVAILABLE = False
 
 
 class EnhancedAcousticService:
@@ -216,6 +222,13 @@ class EnhancedAcousticService:
         Returns:
             EnhancedAcousticMetrics with comprehensive features
         """
+        # Check if acoustic extraction is available
+        if not ACOUSTIC_EXTRACTION_AVAILABLE:
+            # Return minimal metrics if extraction not available
+            return self._get_minimal_metrics(
+                audio_bytes, sample_rate, channels, transcript, duration_seconds
+            )
+        
         # Extract base acoustic features using existing function
         base_features = extract_acoustic_features_from_data(audio_bytes, sample_rate, channels)
         
@@ -324,3 +337,39 @@ class EnhancedAcousticService:
         )
         
         return metrics
+    
+    def _get_minimal_metrics(
+        self,
+        audio_bytes: bytes,
+        sample_rate: int,
+        channels: int,
+        transcript: Optional[str] = None,
+        duration_seconds: Optional[float] = None
+    ) -> EnhancedAcousticMetrics:
+        """
+        Return minimal metrics when full extraction is not available.
+        
+        Args:
+            audio_bytes: Raw audio data
+            sample_rate: Sample rate in Hz
+            channels: Number of channels
+            transcript: Optional transcript
+            duration_seconds: Optional duration
+            
+        Returns:
+            EnhancedAcousticMetrics with basic/default values
+        """
+        # Calculate duration if not provided
+        if duration_seconds is None:
+            duration_seconds = len(audio_bytes) / (sample_rate * channels * 2)
+        
+        # Basic speech rate calculation if transcript available
+        speech_rate_wpm = 0.0
+        if transcript and duration_seconds > 0:
+            word_count = len(transcript.split())
+            speech_rate_wpm = (word_count / duration_seconds) * 60.0
+        
+        return EnhancedAcousticMetrics(
+            speech_rate_wpm=speech_rate_wpm,
+            voice_quality_score=0.5  # Neutral default
+        )

@@ -252,7 +252,7 @@ def extract_linguistic_features_from_data(audio_data: bytes, sample_rate: int, c
             sent_count += 1
             if text:
                 doc = nlp(text)
-                pronouns = sum(bool(token.pos_ == 'PRON')
+                pronouns = sum(1 for token in doc if token.pos_ == 'PRON')
                 articles = sum(1 for token in doc if token.pos_ == 'DET')
                 word_count = len([token for token in doc if token.is_alpha])
                 sent_count = len(list(doc.sents))
