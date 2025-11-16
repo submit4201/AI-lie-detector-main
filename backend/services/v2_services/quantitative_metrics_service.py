@@ -21,6 +21,7 @@ except Exception:
 from backend.models import InteractionMetrics, NumericalLinguisticMetrics # Updated model name
 from typing import List, Dict, Optional, Any, TYPE_CHECKING, Tuple
 from backend.services.v2_services.analysis_protocol import AnalysisService
+import asyncio
 import json
 import re
 import logging
@@ -465,11 +466,8 @@ class QuantitativeMetricsService(AnalysisService):
             return NumericalLinguisticMetrics() # Return default if no text
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
-    async def stream_analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]):
-        """Streaming analysis: yields coarse metrics with partial transcript, then final with complete data."""
-        meta = meta or {}
-        ctx = meta.get("analysis_context")
-        
+    async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> Dict[str, Any]:
+        """Performs full analysis returning both interaction and numerical linguistic metrics."""
         # Use provided audio if available, otherwise use instance audio_data
         audio_bytes = audio or self.audio_data
         
@@ -623,3 +621,35 @@ class QuantitativeMetricsService(AnalysisService):
             "gemini": None,
             "errors": [{"error": "No results produced"}],
         }
+
+    async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
+        """Provide coarse metrics while transcript is partial, then final metrics once the transcript finalizes."""
+        ctx = None
+        if meta:
+            ctx = meta.get("analysis_context")
+
+        # If we have a context and partial transcript, emit early metric
+        if ctx and ctx.transcript_partial:
+            try:
+                metrics = self._calculate_numerical_linguistic_metrics(ctx.transcript_partial, ctx.audio_summary.get("duration"))
+                partial_payload = {
+                    "service_name": self.serviceName,
+                    "service_version": self.serviceVersion,
+                    "local": {"numerical_linguistic_metrics": metrics.__dict__ if hasattr(metrics, '__dict__') else {}},
+                    "gemini": None,
+                    "errors": None,
+                }
+                yield partial_payload
+            except Exception:
+                pass
+
+        # Wait for final transcript if available from context
+        if ctx:
+            waited = 0
+            while ctx.transcript_final is None and waited < 2:
+                await asyncio.sleep(0.1)
+                waited += 0.1
+
+        final_text = transcript or (ctx.transcript_final if ctx else transcript)
+        final_payload = await self.analyze(final_text, audio, meta or {})
+        yield final_payload

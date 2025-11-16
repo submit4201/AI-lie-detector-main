@@ -9,7 +9,7 @@ pytestmark = pytest.mark.unit
 
 
 class DummyStreamingClient:
-    async def transcribe_stream(self, audio_bytes: bytes):
+    async def transcribe_stream(self, audio_bytes: bytes, context_prompt=None):
         # simple generator that simulates streaming partial updates
         yield {"interim": True, "partial_transcript": "partial 1"}
         await asyncio.sleep(0)

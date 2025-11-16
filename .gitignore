@@ -51,8 +51,9 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-.pytest_cache/
-
+.pytest_cache
+.venv-dev/
+backend/requirments-dev.txt
 # Translations
 *.mo
 *.pot

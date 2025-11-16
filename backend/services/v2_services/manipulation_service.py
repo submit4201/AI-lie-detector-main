@@ -175,3 +175,30 @@ class ManipulationService(AnalysisService):
                 "phase": "final",
                 "chunk_index": None,
             }
+
+    async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None) -> AsyncGenerator[Dict[str, Any], None]:
+        # Prefer JSON streaming from the Gemini client for incremental results
+        prompt = f"Analyze the following transcript for signs of manipulation.\nTranscript:\n\"{transcript}\"\nReturn JSON matching the ManipulationAssessment model."
+        try:
+            # If the client supports json_stream, use it to yield partial results incrementally
+            if hasattr(self.gemini_client, 'json_stream'):
+                async for chunk in self.gemini_client.json_stream(prompt, audio_bytes=audio):
+                    data = chunk.get('data') or {}
+                    # Map gracefully into expected shape
+                    yield {
+                        "service_name": self.serviceName,
+                        "service_version": self.serviceVersion,
+                        "local": {},
+                        "gemini": data,
+                        "errors": None,
+                    }
+                # ensure final
+                final = await self.analyze(transcript, audio, meta)
+                yield final
+                return
+        except Exception:
+            # Fall back
+            pass
+
+        result = await self.analyze(transcript, audio, meta)
+        yield result

@@ -10,7 +10,12 @@ import DataDiagnosticPanel from './results/DataDiagnosticPanel';
 import LoadingSpinner from './results/LoadingSpinner';
 import ErrorDisplay from './results/ErrorDisplay';
 import ErrorBoundary from './results/ErrorBoundary';
+import V2ServiceGrid from '../streaming/V2ServiceGrid';
+import StreamingStatusBar from '../streaming/StreamingStatusBar';
 import ValidationStatus from './results/ValidationStatus';
+import ManipulationPanel from './results/ManipulationPanel';
+import ArgumentStructurePanel from './results/ArgumentStructurePanel';
+import TranscriptPanel from '../transcript/TranscriptPanel';
 
 // Helper component for displaying a score with a label
 const ScoreDisplay = ({ label, score, unit = '%' }) => {
@@ -134,6 +139,8 @@ const ResultsDisplay = ({
   partialResults = null,
   lastReceivedComponent = null,
   componentsReceived = []
+  ,
+  v2SessionState = null
 }) => {
   console.log('=== ResultsDisplay Debug ===');
   console.log('analysisResults received:', analysisResults);
@@ -211,6 +218,11 @@ const ResultsDisplay = ({
     return (
       <div className="results-display-container">
         {/* Streaming Status Header */}
+        {v2SessionState && v2SessionState.status && (
+          <div className="mb-4">
+            <StreamingStatusBar state={v2SessionState} onStop={() => {}} onReset={() => {}} />
+          </div>
+        )}
         {isStreaming && (
           <div className="mb-4 bg-blue-500/20 backdrop-blur-sm border border-blue-400/30 rounded-lg p-4">
             <div className="flex items-center gap-3">
@@ -237,6 +249,15 @@ const ResultsDisplay = ({
         
         <ErrorBoundary>
           <div className="results-content space-y-6">
+            <V2ServiceGrid
+              services={serviceResults}
+              transcript={transcriptText}
+              meta={currentResults?.meta}
+              isStreaming={isStreaming}
+              lastReceived={lastReceivedComponent}
+              state={v2SessionState}
+            />
+
             {/* Show Key Highlights as soon as any data is available */}
             {hasResults && (
               <div className="animate-fadeIn">
@@ -291,6 +312,16 @@ const ResultsDisplay = ({
                 isStreaming={isStreaming}
                 highlight={lastReceivedComponent === 'quantitative_metrics'}
               />
+            )}
+
+            {/* Manipulation / Influence Signals */}
+            {(serviceResults.manipulation || currentResults.manipulation_assessment) && (
+              <ManipulationPanel serviceData={serviceResults.manipulation} finalAssessment={currentResults.manipulation_assessment} />
+            )}
+
+            {/* Argument / Reasoning */}
+            {(serviceResults.argument || currentResults.argument_analysis) && (
+              <ArgumentStructurePanel serviceData={serviceResults.argument} finalArgument={currentResults.argument_analysis} />
             )}
 
             {/* Emotion Analysis */}

@@ -106,6 +106,18 @@ class TranscriptionService(AnalysisService):
             chunk_index = 0
             async for ev in self.gemini_client.transcribe_stream(audio, context_prompt=None):
                 if ev.get('interim'):
+                    if 'partial_transcript' in ev:
+                        # Update runtime analysis_context if provided
+                        if meta and meta.get("analysis_context"):
+                            try:
+                                meta.get("analysis_context").update_transcript_partial(ev.get('partial_transcript', ""))
+                            except Exception:
+                                pass
+                        yield {"service_name": svc_name, "interim": True,"partial_transcript": ev.get('partial_transcript', "")}
+                    elif 'payload' in ev:
+                        yield {"service_name": svc_name, "interim": True, "payload": ev.get('payload')}
+                else:
+                    final_payload = {
                     # Interim/partial transcript
                     partial_text = ev.get('partial_transcript', "")
                     if ctx:
@@ -138,6 +150,13 @@ class TranscriptionService(AnalysisService):
                         "phase": "final",
                         "chunk_index": chunk_index,
                     }
+                    # Update analysis context
+                    if meta and meta.get("analysis_context"):
+                        try:
+                            meta.get("analysis_context").finalize_transcript(ev.get('transcript', ""))
+                        except Exception:
+                            pass
+                    yield {"service_name": svc_name, "interim": False, "payload": final_payload}
                     return
         
         # Default fallback to non-streaming behavior
