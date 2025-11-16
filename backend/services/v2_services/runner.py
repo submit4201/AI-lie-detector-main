@@ -142,44 +142,38 @@ class V2AnalysisRunner:
         manipulation_svc = next((s for s in services_for_request if s.serviceName == "manipulation"), None)
         argument_svc = next((s for s in services_for_request if s.serviceName == "argument"), None)
         
-        # Phase B: Start foundational services in parallel
-        transcription_task = None
-        audio_task = None
+        # Phase B: Run foundational services sequentially (for simplicity)
+        # Note: True parallel streaming would require more complex orchestration
         
         if transcription_svc and audio and not ctx.transcript_final:
-            transcription_task = asyncio.create_task(
-                self._stream_service(transcription_svc, transcript or "", audio, meta)
-            )
+            async for event in self._stream_service(transcription_svc, transcript or "", audio, meta):
+                yield event
+                
+                # Update context based on event
+                payload = event.get("payload", {})
+                service_name = event.get("service")
+                
+                if service_name == "transcription":
+                    local_data = payload.get("local", {})
+                    # Check for transcript in local
+                    if local_data.get("transcript") and not payload.get("partial", True):
+                        ctx.transcript_final = local_data["transcript"]
+                    elif local_data.get("partial_transcript"):
+                        ctx.transcript_partial = local_data["partial_transcript"]
+                    if local_data.get("segments"):
+                        ctx.speaker_segments = local_data["segments"]
         
         if audio_analysis_svc and audio:
-            audio_task = asyncio.create_task(
-                self._stream_service(audio_analysis_svc, transcript or "", audio, meta)
-            )
-        
-        # Collect results from Phase B
-        phase_b_tasks = [t for t in [transcription_task, audio_task] if t]
-        
-        if phase_b_tasks:
-            for task in asyncio.as_completed(phase_b_tasks):
-                async for event in await task:
-                    # Forward the event
-                    yield event
-                    
-                    # Update context based on event
-                    payload = event.get("payload", {})
-                    service_name = event.get("service")
-                    
-                    if service_name == "transcription":
-                        if payload.get("transcript") and not event.get("partial", True):
-                            ctx.transcript_final = payload["transcript"]
-                        elif payload.get("partial_transcript"):
-                            ctx.transcript_partial = payload["partial_transcript"]
-                        if payload.get("segments"):
-                            ctx.speaker_segments = payload["segments"]
-                    
-                    elif service_name == "audio_analysis":
-                        if payload.get("local"):
-                            ctx.audio_summary.update(payload["local"])
+            async for event in self._stream_service(audio_analysis_svc, transcript or "", audio, meta):
+                yield event
+                
+                # Update context
+                payload = event.get("payload", {})
+                service_name = event.get("service")
+                
+                if service_name == "audio_analysis":
+                    if payload.get("local"):
+                        ctx.audio_summary.update(payload["local"])
         
         # Phase C: Quantitative metrics (if we have enough transcript)
         if quantitative_svc and (ctx.transcript_final or len(ctx.transcript_partial.split()) >= 20):
@@ -196,35 +190,30 @@ class V2AnalysisRunner:
                     ctx.quantitative_metrics.update(event["local"])
         
         # Phase D: Higher-level analysis (manipulation and argument)
+        # Run sequentially for simplicity
         # Wait until we have minimum context
         if ctx.transcript_final or len(ctx.transcript_partial.split()) >= 30:
-            higher_level_tasks = []
-            
             if manipulation_svc:
-                higher_level_tasks.append(
-                    asyncio.create_task(
-                        self._stream_service(manipulation_svc, ctx.transcript_final or ctx.transcript_partial, audio, meta)
-                    )
-                )
+                async for event in self._stream_service(manipulation_svc, ctx.transcript_final or ctx.transcript_partial, audio, meta):
+                    yield event
+                    
+                    # Store final results in context
+                    if not event.get("partial", True):
+                        payload = event.get("payload", {})
+                        service_name = event.get("service")
+                        if service_name and payload:
+                            ctx.service_results[service_name] = payload
             
             if argument_svc:
-                higher_level_tasks.append(
-                    asyncio.create_task(
-                        self._stream_service(argument_svc, ctx.transcript_final or ctx.transcript_partial, audio, meta)
-                    )
-                )
-            
-            if higher_level_tasks:
-                for task in asyncio.as_completed(higher_level_tasks):
-                    async for event in await task:
-                        yield event
-                        
-                        # Store final results in context
-                        if not event.get("partial", True):
-                            payload = event.get("payload", {})
-                            service_name = event.get("service")
-                            if service_name and payload:
-                                ctx.service_results[service_name] = payload
+                async for event in self._stream_service(argument_svc, ctx.transcript_final or ctx.transcript_partial, audio, meta):
+                    yield event
+                    
+                    # Store final results in context
+                    if not event.get("partial", True):
+                        payload = event.get("payload", {})
+                        service_name = event.get("service")
+                        if service_name and payload:
+                            ctx.service_results[service_name] = payload
         
         # Final: Send analysis.done event
         yield {

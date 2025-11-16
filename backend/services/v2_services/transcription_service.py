@@ -94,55 +94,80 @@ class TranscriptionService(AnalysisService):
         }
 
     async def stream_analyze(self, transcript: Optional[str] = None, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
-        """Optional streaming analysis - yields interim updates followed by final transcript.
-
-        This is a simple compatibility shim until the Gemini SDK exposes true
-        streaming transcription; it yields two events: an initial placeholder
-        then the final result returned by `analyze`.
+        """Streaming transcription: yields interim partial transcripts then final.
+        
+        This follows the v2 streaming protocol with partial/phase/chunk_index fields.
         """
+        meta = meta or {}
+        ctx = meta.get("analysis_context")
+        
         # Prefer client streaming if available
         if hasattr(self.gemini_client, 'transcribe_stream') and audio:
-            # Forward any existing transcript text as context to Gemini streaming
-            # Build context prompt with optional streaming analysis instructions
-            context_prompt = None
-            if transcript:
-                context_prompt = f"TranscriptContext:{transcript}\nPlease continue or refine as needed."  # guideline to the model
-
-            # Allow meta to include a custom analysis instruction for the streaming session.
-            # If the front-end passes `meta['streaming_analysis'] = True` and provides
-            # `meta['analysis_instructions']`, we'll append these instructions to the context
-            # so the live model can emit JSON objects that include analysis results.
-            if meta and meta.get("streaming_analysis"):
-                ai = meta.get("analysis_instructions") or (
-                    "Also analyze the text for manipulation and argument structure. "
-                    "Return JSON containing keys 'manipulation' and 'argument' alongside 'transcription'."
-                )
-                if context_prompt:
-                    context_prompt = context_prompt + "\n" + ai
-                else:
-                    context_prompt = ai
-            async for ev in self.gemini_client.transcribe_stream(audio, context_prompt=context_prompt):
-                # ev: {'interim': bool, 'partial_transcript': str} or final {'interim': False, 'transcript': '...'}
-                # If the gemini client included a service name (structured analysis), honor it
-                svc_name = ev.get('service_name', self.serviceName)
+            chunk_index = 0
+            async for ev in self.gemini_client.transcribe_stream(audio, context_prompt=None):
                 if ev.get('interim'):
-                    if 'partial_transcript' in ev:
-                        yield {"service_name": svc_name, "interim": True, "partial_transcript": ev.get('partial_transcript', "")}
-                    elif 'payload' in ev:
-                        yield {"service_name": svc_name, "interim": True, "payload": ev.get('payload')}
-                else:
-                    final_payload = {
+                    # Interim/partial transcript
+                    partial_text = ev.get('partial_transcript', "")
+                    if ctx:
+                        ctx.transcript_partial = partial_text
+                    
+                    yield {
                         "service_name": self.serviceName,
                         "service_version": self.serviceVersion,
-                        "transcript": ev.get('transcript', ""),
-                        "errors": None,
-                        "local": {},
+                        "local": {"partial_transcript": partial_text},
                         "gemini": None,
+                        "errors": None,
+                        "partial": True,
+                        "phase": "coarse",
+                        "chunk_index": chunk_index,
                     }
-                    yield {"service_name": svc_name, "interim": False, "payload": final_payload}
+                    chunk_index += 1
+                else:
+                    # Final transcript
+                    final_text = ev.get('transcript', "")
+                    if ctx:
+                        ctx.transcript_final = final_text
+                    
+                    yield {
+                        "service_name": self.serviceName,
+                        "service_version": self.serviceVersion,
+                        "local": {"transcript": final_text},
+                        "gemini": None,
+                        "errors": None,
+                        "partial": False,
+                        "phase": "final",
+                        "chunk_index": chunk_index,
+                    }
                     return
-
+        
         # Default fallback to non-streaming behavior
-        yield {"service_name": self.serviceName, "interim": True, "partial_transcript": ""}
+        # Yield empty partial first
+        yield {
+            "service_name": self.serviceName,
+            "service_version": self.serviceVersion,
+            "local": {"partial_transcript": ""},
+            "gemini": None,
+            "errors": None,
+            "partial": True,
+            "phase": "coarse",
+            "chunk_index": 0,
+        }
+        
+        # Then get final result from analyze
         final = await self.analyze(transcript=transcript, audio=audio, meta=meta)
-        yield {"service_name": self.serviceName, "interim": False, "payload": final}
+        
+        # Update context
+        if ctx and final.get("transcript"):
+            ctx.transcript_final = final["transcript"]
+        
+        # Convert analyze result to streaming format
+        yield {
+            "service_name": self.serviceName,
+            "service_version": self.serviceVersion,
+            "local": {"transcript": final.get("transcript", "")},
+            "gemini": None,
+            "errors": final.get("errors"),
+            "partial": False,
+            "phase": "final",
+            "chunk_index": 1,
+        }
