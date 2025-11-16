@@ -9,7 +9,7 @@ This service focuses on formality, complexity, and linguistic interpretation.
 import logging
 from typing import Optional, Dict, Any, AsyncGenerator
 
-from backend.models import LinguisticAnalysis, NumericalLinguisticMetrics
+from backend.models import LinguisticAnalysis
 from backend.services.v2_services.analysis_protocol import AnalysisService
 from backend.services.v2_services.gemini_client import GeminiClientV2
 
