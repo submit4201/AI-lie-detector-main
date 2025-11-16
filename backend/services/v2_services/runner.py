@@ -64,192 +64,209 @@ class V2AnalysisRunner:
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Runs the full v2 analysis pipeline.
-        1. Transcribes audio if no transcript is provided.
-        2. Runs all other registered services concurrently.
-        3. Aggregates and returns the results.
+        Runs the full v2 analysis pipeline by consuming stream_run.
+        Returns the final aggregated results.
         """
         meta = meta or {}
+        start_time = time.time()
+        
         results: Dict[str, Any] = {
             "services": {},
             "errors": [],
             "timings": {},
+            "transcript": "",
+            "meta": meta,
         }
-        start_time = time.time()
-
-        # Build service instances for this run with current context (so they capture the transcript)
-        services_for_request = self._build_services(transcript or "", audio, meta)
-
-        # --- 1. Concurrent Audio Analysis and Transcription ---
-        initial_tasks = []
-        transcription_service = next((s for s in services_for_request if s.serviceName == "transcription"), None)
-        audio_analysis_service = next((s for s in services_for_request if s.serviceName == "audio_analysis"), None)
-
-        if audio_analysis_service and audio:
-            initial_tasks.append(audio_analysis_service.analyze(audio=audio, meta=meta))
-
-        final_transcript = transcript
-        if not final_transcript and transcription_service and audio:
-            initial_tasks.append(transcription_service.analyze(audio=audio, meta=meta))
-
-        if initial_tasks:
-            initial_results = await asyncio.gather(*initial_tasks, return_exceptions=True)
-            for result in initial_results:
-                if isinstance(result, Exception):
-                    logger.error(f"Initial service failed during gather: {result}", exc_info=True)
-                    results["errors"].append({"service": "initialization", "error": str(result)})
-                    continue
-
-                service_name = result.get("service_name")
-                if service_name:
-                    results["services"][service_name] = result
-                    if service_name == "audio_analysis" and not result.get("errors"):
-                        meta['duration'] = result.get("local", {}).get("duration")
-                    elif service_name == "transcription" and not result.get("errors"):
-                        final_transcript = result.get("transcript")
-
-        # If transcription didn't happen via a transcription service, try gemini client
-        auto_generated = False
-        if not final_transcript and audio:
-            final_transcript, auto_generated = await self._ensure_transcript(final_transcript or transcript or "", audio, meta)
-
-        results["transcript"] = final_transcript
-        results["meta"] = {**meta, "transcript_auto_generated": auto_generated}
-
-        # --- 2. Concurrent Analysis of Other Services ---
-        other_services = [
-            s for s in services_for_request
-            if s.serviceName not in ["transcription", "audio_analysis"]
-        ]
         
-        async def run_service(service: AnalysisService):
-            try:
-                return service.serviceName, await service.analyze(
-                    transcript=final_transcript, audio=audio, meta=meta
-                )
-            except Exception as e:
-                logger.error(f"Service {service.serviceName} failed during run: {e}", exc_info=True)
-                return service.serviceName, {
-                    "service_name": service.serviceName,
-                    "errors": [{"error": "Service execution failed", "details": str(e)}],
-                    "local": {}, "gemini": None
-                }
-
-        if other_services:
-            service_tasks = [run_service(service) for service in other_services]
-            service_results = await asyncio.gather(*service_tasks)
-            for service_name, result_data in service_results:
-                results["services"][service_name] = result_data
-
+        # Consume the streaming pipeline
+        async for event in self.stream_run(transcript, audio, meta):
+            event_type = event.get("event")
+            
+            if event_type == "analysis.update":
+                service = event.get("service")
+                payload = event.get("payload", {})
+                
+                # Only store final results (not partial)
+                if not payload.get("partial", False):
+                    results["services"][service] = payload
+                
+                # Extract errors
+                if payload.get("errors"):
+                    results["errors"].extend(payload["errors"])
+            
+            elif event_type == "analysis.done":
+                # Final event with aggregated data
+                done_payload = event.get("payload", {})
+                if done_payload.get("results"):
+                    results["services"].update(done_payload["results"])
+                if done_payload.get("meta"):
+                    results["meta"].update(done_payload["meta"])
+                    results["transcript"] = done_payload["meta"].get("transcript_final", results["transcript"])
+        
         results["timings"]["total_duration"] = time.time() - start_time
         return results
 
     async def stream_run(
         self,
-        transcript: str,
+        transcript: Optional[str] = None,
         audio: Optional[bytes] = None,
         meta: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Yield incremental service results for streaming responses."""
-
+        """Yield incremental service results with phased orchestration.
+        
+        Phase A: Input prep - create AnalysisContext
+        Phase B: Foundational services - transcription and audio analysis in parallel
+        Phase C: Metrics - quantitative metrics once we have enough data
+        Phase D: Higher-level analysis - manipulation and argument once we have context
+        """
         meta = meta or {}
-        # If the transcription service provides a streaming interface, use it
-        transcript_text, generated = transcript, False
-        if self.transcription_service and hasattr(self.transcription_service, 'stream_analyze') and audio:
-            # Stream transcript events and yield interim updates
-            async for ev in self.transcription_service.stream_analyze(transcript=transcript, audio=audio, meta=meta):
-                # The streaming service may return updates for different services
-                svc = ev.get('service_name', 'transcription')
-                if ev.get('interim'):
-                    # If partial transcript is present, forward as a transcript event
-                    if ev.get('partial_transcript') is not None:
-                        yield {
-                            "event": "analysis.update",
-                            "service": "transcript",
-                            "payload": {"partial_transcript": ev.get('partial_transcript', '')}
-                        }
-                    # If the service also emits additional keys (e.g., manipulation), forward them
-                    elif ev.get('payload'):
-                        yield {
-                            "event": "analysis.update",
-                            "service": svc,
-                            "payload": ev.get('payload')
-                        }
-                else:
-                    # final transcript event; support other service payloads
-                    payload = ev.get('payload') or {}
-                    # If this is a final transcript payload, update transcript_text
-                    if svc == 'transcription' or payload.get('transcript'):
-                        transcript_text = payload.get('transcript', transcript_text)
-                        generated = True
-                        yield {
-                            "event": "analysis.update",
-                            "service": "transcript",
-                            "payload": {"transcript": transcript_text, "auto_generated": generated},
-                        }
-                    else:
-                        # Final payload for another service
-                        yield {
-                            "event": "analysis.update",
-                            "service": svc,
-                            "payload": payload,
-                        }
-                    # break after final transcript or if this stream concluded
-                    break
-        else:
-            transcript_text, generated = await self._ensure_transcript(transcript, audio, meta)
-
-        aggregate = {
-            "transcript": transcript_text,
-            "services": {},
-            "errors": [],
-            "meta": {**meta, "transcript_auto_generated": generated},
-        }
-
-        yield {
-            "event": "analysis.update",
-            "service": "transcript",
-            "payload": {
-                "transcript": transcript_text,
-                "auto_generated": generated,
-            },
-        }
-
-        services = self._build_services(transcript_text, audio, meta)
-        tasks = [
-            asyncio.create_task(self._execute_service(service, transcript_text, audio, meta))
-            for service in services
-        ]
-
-        total = len(tasks) if tasks else 1
-        completed = 0
-
-        for task in asyncio.as_completed(tasks):
-            service_name, payload, error_message = await task
-            aggregate["services"][service_name] = payload
-            if error_message:
-                aggregate["errors"].append({"service": service_name, "message": error_message})
-
-            completed += 1
-
-            yield {
-                "event": "analysis.update",
-                "service": service_name,
-                "payload": payload,
-                "errors": error_message,
-            }
-
-            yield {
-                "event": "analysis.progress",
-                "service": service_name,
-                "completed": completed,
-                "total": total,
-            }
-
+        
+        # Phase A: Build AnalysisContext
+        ctx = AnalysisContext(
+            transcript_partial=transcript or "",
+            audio_bytes=audio,
+            config=meta.get("config", {}),
+            session_summary=meta.get("session_summary"),
+        )
+        
+        # Inject context into meta for services
+        meta["analysis_context"] = ctx
+        
+        # Build service instances
+        services_for_request = self._build_services(transcript or "", audio, meta)
+        
+        # Find specific services
+        transcription_svc = next((s for s in services_for_request if s.serviceName == "transcription"), None)
+        audio_analysis_svc = next((s for s in services_for_request if s.serviceName == "audio_analysis"), None)
+        quantitative_svc = next((s for s in services_for_request if s.serviceName == "quantitative_metrics"), None)
+        manipulation_svc = next((s for s in services_for_request if s.serviceName == "manipulation"), None)
+        argument_svc = next((s for s in services_for_request if s.serviceName == "argument"), None)
+        
+        # Phase B: Start foundational services in parallel
+        transcription_task = None
+        audio_task = None
+        
+        if transcription_svc and audio and not ctx.transcript_final:
+            transcription_task = asyncio.create_task(
+                self._stream_service(transcription_svc, transcript or "", audio, meta)
+            )
+        
+        if audio_analysis_svc and audio:
+            audio_task = asyncio.create_task(
+                self._stream_service(audio_analysis_svc, transcript or "", audio, meta)
+            )
+        
+        # Collect results from Phase B
+        phase_b_tasks = [t for t in [transcription_task, audio_task] if t]
+        
+        if phase_b_tasks:
+            for task in asyncio.as_completed(phase_b_tasks):
+                async for event in await task:
+                    # Forward the event
+                    yield event
+                    
+                    # Update context based on event
+                    payload = event.get("payload", {})
+                    service_name = event.get("service")
+                    
+                    if service_name == "transcription":
+                        if payload.get("transcript") and not event.get("partial", True):
+                            ctx.transcript_final = payload["transcript"]
+                        elif payload.get("partial_transcript"):
+                            ctx.transcript_partial = payload["partial_transcript"]
+                        if payload.get("segments"):
+                            ctx.speaker_segments = payload["segments"]
+                    
+                    elif service_name == "audio_analysis":
+                        if payload.get("local"):
+                            ctx.audio_summary.update(payload["local"])
+        
+        # Phase C: Quantitative metrics (if we have enough transcript)
+        if quantitative_svc and (ctx.transcript_final or len(ctx.transcript_partial.split()) >= 20):
+            effective_transcript = ctx.transcript_final or ctx.transcript_partial
+            async for event in quantitative_svc.stream_analyze(effective_transcript, audio, meta):
+                yield {
+                    "event": "analysis.update",
+                    "service": event.get("service_name", "quantitative_metrics"),
+                    "payload": event,
+                }
+                
+                # Update context with metrics
+                if not event.get("partial", True) and event.get("local"):
+                    ctx.quantitative_metrics.update(event["local"])
+        
+        # Phase D: Higher-level analysis (manipulation and argument)
+        # Wait until we have minimum context
+        if ctx.transcript_final or len(ctx.transcript_partial.split()) >= 30:
+            higher_level_tasks = []
+            
+            if manipulation_svc:
+                higher_level_tasks.append(
+                    asyncio.create_task(
+                        self._stream_service(manipulation_svc, ctx.transcript_final or ctx.transcript_partial, audio, meta)
+                    )
+                )
+            
+            if argument_svc:
+                higher_level_tasks.append(
+                    asyncio.create_task(
+                        self._stream_service(argument_svc, ctx.transcript_final or ctx.transcript_partial, audio, meta)
+                    )
+                )
+            
+            if higher_level_tasks:
+                for task in asyncio.as_completed(higher_level_tasks):
+                    async for event in await task:
+                        yield event
+                        
+                        # Store final results in context
+                        if not event.get("partial", True):
+                            payload = event.get("payload", {})
+                            service_name = event.get("service")
+                            if service_name and payload:
+                                ctx.service_results[service_name] = payload
+        
+        # Final: Send analysis.done event
         yield {
             "event": "analysis.done",
-            "payload": aggregate,
+            "payload": {
+                "results": ctx.service_results,
+                "meta": {
+                    "transcript_final": ctx.transcript_final,
+                    "speaker_segments": ctx.speaker_segments,
+                    "audio_summary": ctx.audio_summary,
+                    "quantitative_metrics": ctx.quantitative_metrics,
+                }
+            }
         }
+    
+    async def _stream_service(
+        self,
+        service: AnalysisService,
+        transcript: str,
+        audio: Optional[bytes],
+        meta: Dict[str, Any]
+    ) -> AsyncGenerator[Dict[str, Any], None]:
+        """Helper to stream a single service and wrap results in event format."""
+        try:
+            async for result in service.stream_analyze(transcript, audio, meta):
+                yield {
+                    "event": "analysis.update",
+                    "service": result.get("service_name", service.serviceName),
+                    "payload": result,
+                }
+        except Exception as e:
+            logger.error(f"Service {service.serviceName} streaming failed: {e}", exc_info=True)
+            yield {
+                "event": "analysis.update",
+                "service": service.serviceName,
+                "payload": {
+                    "service_name": service.serviceName,
+                    "errors": [{"error": "Service streaming failed", "details": str(e)}],
+                    "partial": False,
+                    "phase": "final",
+                }
+            }
 
     async def _ensure_transcript(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> tuple[str, bool]:
         """Ensure we have a transcript text. If missing and audio provided, try to transcribe.
