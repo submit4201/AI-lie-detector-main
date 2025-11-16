@@ -156,10 +156,18 @@ class V2AnalysisRunner:
                 if service_name == "transcription":
                     local_data = payload.get("local", {})
                     # Check for transcript in local
-                    if local_data.get("transcript") and not payload.get("partial", True):
-                        ctx.transcript_final = local_data["transcript"]
-                    elif local_data.get("partial_transcript"):
-                        ctx.transcript_partial = local_data["partial_transcript"]
+                    # For final transcript, prefer "transcript", fallback to "partial_transcript"
+                    if not payload.get("partial", True):
+                        if local_data.get("transcript"):
+                            ctx.transcript_final = local_data["transcript"]
+                        elif local_data.get("partial_transcript"):
+                            ctx.transcript_final = local_data["partial_transcript"]
+                    # For partial transcript, prefer "partial_transcript", fallback to "transcript"
+                    else:
+                        if local_data.get("partial_transcript"):
+                            ctx.transcript_partial = local_data["partial_transcript"]
+                        elif local_data.get("transcript"):
+                            ctx.transcript_partial = local_data["transcript"]
                     if local_data.get("segments"):
                         ctx.speaker_segments = local_data["segments"]
         
