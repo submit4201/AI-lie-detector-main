@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import time
 import logging
+from dataclasses import dataclass, field
 from typing import Dict, Any, Optional, List, AsyncGenerator, Tuple
 
 from backend.services.v2_services.analysis_protocol import AnalysisService
@@ -11,6 +12,42 @@ from backend.services.v2_services.gemini_client import GeminiClientV2
 from backend.services.v2_services.service_registry import build_service_instances, ServiceFactory, REGISTERED_SERVICES
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AnalysisContext:
+    """Central context object for v2 analysis pipeline.
+    
+    This dataclass holds all state for a single analysis request,
+    avoiding global mutable state. Services receive this via meta["analysis_context"].
+    """
+    # Transcript state
+    transcript_partial: str = ""
+    transcript_final: Optional[str] = None
+    
+    # Audio state
+    audio_bytes: Optional[bytes] = None
+    audio_summary: Dict[str, Any] = field(default_factory=dict)
+    
+    # Enhanced metrics
+    acoustic_metrics: Optional[Dict[str, Any]] = None  # Enhanced acoustic metrics
+    linguistic_metrics: Optional[Dict[str, Any]] = None  # Enhanced linguistic metrics
+    
+    # Baseline and calibration
+    baseline_profile: Optional[Dict[str, Any]] = None  # User baseline for normalization
+    
+    # Metrics and analysis results
+    quantitative_metrics: Dict[str, Any] = field(default_factory=dict)
+    service_results: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    
+    # Speaker and diarization
+    speaker_segments: List[Dict[str, Any]] = field(default_factory=list)
+    
+    # Session context (compact, privacy-safe)
+    session_summary: Optional[Dict[str, Any]] = None
+    
+    # Configuration flags
+    config: Dict[str, Any] = field(default_factory=dict)
 
 
 class V2AnalysisRunner:
@@ -35,10 +72,8 @@ class V2AnalysisRunner:
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
-        Runs the full v2 analysis pipeline.
-        1. Transcribes audio if no transcript is provided.
-        2. Runs all other registered services concurrently.
-        3. Aggregates and returns the results.
+        Runs the full v2 analysis pipeline by consuming stream_run.
+        Returns the final aggregated results.
         """
         meta = meta or {}
         # Create the per-request AnalysisContext and attach it to meta
@@ -47,84 +82,51 @@ class V2AnalysisRunner:
             "services": {},
             "errors": [],
             "timings": {},
+            "transcript": "",
+            "meta": meta,
         }
-        start_time = time.time()
-
-        # Build service instances for this run with current context (so they capture the transcript)
-        services_for_request = self._build_services(transcript or "", audio, meta)
-
-        # --- 1. Concurrent Audio Analysis and Transcription ---
-        initial_tasks = []
-        transcription_service = next((s for s in services_for_request if s.serviceName == "transcription"), None)
-        audio_analysis_service = next((s for s in services_for_request if s.serviceName == "audio_analysis"), None)
-
-        if audio_analysis_service and audio:
-            initial_tasks.append(audio_analysis_service.analyze(audio=audio, meta=meta))
-
-        final_transcript = transcript
-        if not final_transcript and transcription_service and audio:
-            initial_tasks.append(transcription_service.analyze(audio=audio, meta=meta))
-
-        if initial_tasks:
-            initial_results = await asyncio.gather(*initial_tasks, return_exceptions=True)
-            for result in initial_results:
-                if isinstance(result, Exception):
-                    logger.error(f"Initial service failed during gather: {result}", exc_info=True)
-                    results["errors"].append({"service": "initialization", "error": str(result)})
-                    continue
-
-                service_name = result.get("service_name")
-                if service_name:
-                    results["services"][service_name] = result
-                    if service_name == "audio_analysis" and not result.get("errors"):
-                        meta['duration'] = result.get("local", {}).get("duration")
-                    elif service_name == "transcription" and not result.get("errors"):
-                        final_transcript = result.get("transcript")
-
-        # If transcription didn't happen via a transcription service, try gemini client
-        auto_generated = False
-        if not final_transcript and audio:
-            final_transcript, auto_generated = await self._ensure_transcript(final_transcript or transcript or "", audio, meta)
-
-        results["transcript"] = final_transcript
-        results["meta"] = {**meta, "transcript_auto_generated": auto_generated}
-
-        # --- 2. Concurrent Analysis of Other Services ---
-        other_services = [
-            s for s in services_for_request
-            if s.serviceName not in ["transcription", "audio_analysis"]
-        ]
         
-        async def run_service(service: AnalysisService):
-            try:
-                return service.serviceName, await service.analyze(
-                    transcript=final_transcript, audio=audio, meta=meta
-                )
-            except Exception as e:
-                logger.error(f"Service {service.serviceName} failed during run: {e}", exc_info=True)
-                return service.serviceName, {
-                    "service_name": service.serviceName,
-                    "errors": [{"error": "Service execution failed", "details": str(e)}],
-                    "local": {}, "gemini": None
-                }
-
-        if other_services:
-            service_tasks = [run_service(service) for service in other_services]
-            service_results = await asyncio.gather(*service_tasks)
-            for service_name, result_data in service_results:
-                results["services"][service_name] = result_data
-
+        # Consume the streaming pipeline
+        async for event in self.stream_run(transcript, audio, meta):
+            event_type = event.get("event")
+            
+            if event_type == "analysis.update":
+                service = event.get("service")
+                payload = event.get("payload", {})
+                
+                # Only store final results (not partial)
+                if not payload.get("partial", False):
+                    results["services"][service] = payload
+                
+                # Extract errors
+                if payload.get("errors"):
+                    results["errors"].extend(payload["errors"])
+            
+            elif event_type == "analysis.done":
+                # Final event with aggregated data
+                done_payload = event.get("payload", {})
+                if done_payload.get("results"):
+                    results["services"].update(done_payload["results"])
+                if done_payload.get("meta"):
+                    results["meta"].update(done_payload["meta"])
+                    results["transcript"] = done_payload["meta"].get("transcript_final", results["transcript"])
+        
         results["timings"]["total_duration"] = time.time() - start_time
         return results
 
     async def stream_run(
         self,
-        transcript: str,
+        transcript: Optional[str] = None,
         audio: Optional[bytes] = None,
         meta: Optional[Dict[str, Any]] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Yield incremental service results for streaming responses."""
-
+        """Yield incremental service results with phased orchestration.
+        
+        Phase A: Input prep - create AnalysisContext
+        Phase B: Foundational services - transcription and audio analysis in parallel
+        Phase C: Metrics - quantitative metrics once we have enough data
+        Phase D: Higher-level analysis - manipulation and argument once we have context
+        """
         meta = meta or {}
         # Create AnalysisContext and inject it to the meta
         ctx = AnalysisContext(audio_bytes=audio)
@@ -190,8 +192,7 @@ class V2AnalysisRunner:
         }
 
         yield {
-            "event": "analysis.update",
-            "service": "transcript",
+            "event": "analysis.done",
             "payload": {
                 "transcript": transcript_text,
                 "auto_generated": generated,
