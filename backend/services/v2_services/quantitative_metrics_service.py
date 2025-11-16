@@ -539,8 +539,9 @@ class QuantitativeMetricsService(AnalysisService):
             }
         
         # Phase 2: Final - complete analysis with Gemini interaction metrics
-        # Only proceed if we have a final transcript or enough partial data
-        if not is_partial or (effective_transcript and len(effective_transcript.split()) >= 30):
+        # Proceed if: (1) we have a final transcript, OR (2) we have enough partial data (>= 30 words)
+        has_sufficient_data = (not is_partial) or (effective_transcript and len(effective_transcript.split()) >= 30)
+        if has_sufficient_data:
             try:
                 # Try to get Gemini analysis
                 interaction_metrics = await self.analyze_interaction_metrics(
