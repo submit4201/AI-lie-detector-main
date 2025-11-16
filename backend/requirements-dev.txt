@@ -1,7 +1,7 @@
 # Development and test requirements
 pytest>=7.4,<9
 pytest-asyncio>=0.21,<0.25
-httpx>=0.24,<0.28
+httpx
 pytest-cov>=4.1,<6
 respx>=0.20,<0.25
 responses>=0.23,<0.26
@@ -11,3 +11,4 @@ pydantic
 python-dotenv
 pydub
 numpy
+.

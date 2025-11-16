@@ -81,7 +81,6 @@ dependencies = [
   "google-genai",
   "python-dotenv",
   "ffmpeg>=1.4",
-  "torch-directml>=0.1.13.dev221216",
 ]
 
 [tool.setuptools]

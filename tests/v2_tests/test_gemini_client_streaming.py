@@ -41,20 +41,19 @@ class DummyChat:
     def __init__(self, messages):
         self._messages = messages
 
-    async def connect(self, model=None):
-        # Return an async context manager which yields a session with messages
-        class CM:
-            def __init__(self, messages):
-                self._messages = messages
+    # Implement async context manager protocol directly on DummyChat
+    async def __aenter__(self):
+        self.session = DummySession(self._messages)
+        return self.session
 
-            async def __aenter__(self):
-                self.session = DummySession(self._messages)
-                return self.session
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
 
-            async def __aexit__(self, exc_type, exc, tb):
-                return False
-
-        return CM(self._messages)
+    # Expose connect as a regular method returning the context manager itself,
+    # matching the usage pattern `client.aio.live.chat.connect(...)` in the
+    # Gemini client implementation.
+    def connect(self, model=None):  # pragma: no cover - trivial adapter
+        return self
 
 
 class DummyAIO:
