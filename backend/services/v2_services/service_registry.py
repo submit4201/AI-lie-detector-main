@@ -115,6 +115,11 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
         transcript=context.get("transcript", ""),
         meta=context.get("meta", {}),
     ),
+    "enhanced_acoustic": lambda context: __import__('backend.services.v2_services.enhanced_acoustic_service', fromlist=['EnhancedAcousticService']).EnhancedAcousticService(
+        transcript=context.get("transcript", ""),
+        audio_data=context.get("audio"),
+        meta=context.get("meta", {}),
+    ),
     # All v1 services now have v2 equivalents
 }
 

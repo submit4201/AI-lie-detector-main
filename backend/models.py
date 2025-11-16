@@ -36,6 +36,50 @@ class AudioQualityMetrics(BaseModel):
     volume_consistency: float = Field(default=50.0, description="Volume consistency score (0-100).")
     background_noise_level: float = Field(default=0.0, description="Background noise level assessment.")
 
+
+class EnhancedAcousticMetrics(BaseModel):
+    """Advanced acoustic metrics for deception detection and credibility analysis.
+    
+    Based on forensic phonetics and psychophysiological research showing correlations
+    between these metrics and cognitive load, stress, and deceptive behavior.
+    """
+    # Pitch-related metrics (vocal fold vibration)
+    pitch_jitter: Optional[float] = Field(default=None, description="Pitch jitter - cycle-to-cycle F0 perturbation (%). Higher values indicate vocal instability.")
+    pitch_shimmer: Optional[float] = Field(default=None, description="Pitch shimmer - amplitude perturbation (%). Higher values indicate tension.")
+    pitch_mean: Optional[float] = Field(default=None, description="Mean fundamental frequency (F0) in Hz.")
+    pitch_std: Optional[float] = Field(default=None, description="Standard deviation of F0 - prosodic variability.")
+    pitch_range: Optional[float] = Field(default=None, description="F0 range (max - min) in Hz.")
+    
+    # Formant metrics (vocal tract resonance)
+    formant_f1_mean: Optional[float] = Field(default=None, description="Mean first formant (F1) frequency in Hz.")
+    formant_f2_mean: Optional[float] = Field(default=None, description="Mean second formant (F2) frequency in Hz.")
+    formant_f3_mean: Optional[float] = Field(default=None, description="Mean third formant (F3) frequency in Hz.")
+    formant_dispersion: Optional[float] = Field(default=None, description="Formant dispersion - vocal tract constriction indicator.")
+    
+    # Harmonics and noise
+    hnr_mean: Optional[float] = Field(default=None, description="Mean Harmonics-to-Noise Ratio (dB). Lower values indicate breathiness/tension.")
+    hnr_std: Optional[float] = Field(default=None, description="Standard deviation of HNR.")
+    
+    # Intensity and energy
+    intensity_mean: Optional[float] = Field(default=None, description="Mean intensity (dB).")
+    intensity_std: Optional[float] = Field(default=None, description="Standard deviation of intensity.")
+    intensity_range: Optional[float] = Field(default=None, description="Intensity range (dynamic range).")
+    
+    # Temporal metrics
+    speech_rate_syllables: Optional[float] = Field(default=None, description="Speech rate in syllables per second.")
+    pause_duration_total: Optional[float] = Field(default=None, description="Total duration of pauses in seconds.")
+    pause_count: Optional[int] = Field(default=None, description="Number of detected pauses.")
+    pause_rate: Optional[float] = Field(default=None, description="Pause rate (pauses per minute).")
+    
+    # Spectral features
+    spectral_centroid: Optional[float] = Field(default=None, description="Spectral centroid - brightness indicator.")
+    spectral_entropy: Optional[float] = Field(default=None, description="Spectral entropy - signal complexity.")
+    
+    # Quality flags
+    analysis_quality: Optional[str] = Field(default="unknown", description="Quality of acoustic analysis (good/fair/poor/failed).")
+    insufficient_voiced: bool = Field(default=False, description="Flag if insufficient voiced frames for reliable analysis.")
+
+
 class EmotionScore(BaseModel):
     label: str = Field(default="", description="Emotion label (e.g., 'anger', 'joy').")
     score: float = Field(default=0.0, description="Confidence score for the emotion (0.0-1.0).")
