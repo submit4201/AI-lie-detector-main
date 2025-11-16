@@ -120,7 +120,12 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
         audio_data=context.get("audio"),
         meta=context.get("meta", {}),
     ),
-    # All v1 services now have v2 equivalents
+    "credibility_scoring": lambda context: __import__('backend.services.v2_services.credibility_scoring_service', fromlist=['CredibilityScoringService']).CredibilityScoringService(
+        baseline_profile=context.get("meta", {}).get("baseline_profile"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    # All v1 services now have v2 equivalents + advanced credibility analysis
 }
 
 REGISTERED_SERVICES: List[Callable[[Dict[str, Any]], AnalysisService]] = [
