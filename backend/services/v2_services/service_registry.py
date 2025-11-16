@@ -94,4 +94,6 @@ REGISTERED_SERVICES: List[Callable[[Dict[str, Any]], AnalysisService]] = [
     SERVICE_FACTORIES["transcription"],
     SERVICE_FACTORIES["audio_analysis"],
     SERVICE_FACTORIES["quantitative_metrics"],
+    SERVICE_FACTORIES["manipulation"],
+    SERVICE_FACTORIES["argument"],
 ]
