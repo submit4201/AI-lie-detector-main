@@ -130,7 +130,7 @@ async def test_v2_runner():
             
             event_count = 0
             async for event in runner.stream_run(
-                audio_bytes=audio_bytes,
+                audio=audio_bytes,
                 transcript=None,
                 meta={"session_id": "test"}
             ):

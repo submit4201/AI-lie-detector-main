@@ -488,6 +488,7 @@ class QuantitativeMetricsService(AnalysisService):
         logger.info(f"Starting v2 streaming analysis. Partial: {is_partial}, Duration: {audio_duration_seconds}s")
         
         # Phase 1: Coarse - quick local metrics only
+        coarse_local = {}  # Initialize to prevent NameError
         try:
             coarse_numerical = await self.get_numerical_linguistic_metrics(
                 effective_transcript or "", 
@@ -525,6 +526,7 @@ class QuantitativeMetricsService(AnalysisService):
             }
         except Exception as e:
             logger.error(f"Coarse metrics calculation failed: {e}", exc_info=True)
+            coarse_local = {}  # Ensure it's defined even on error
             yield {
                 "service_name": self.serviceName,
                 "service_version": self.serviceVersion,
