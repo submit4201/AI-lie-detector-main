@@ -79,13 +79,104 @@ class AudioAnalysisService(AnalysisService):
             background_noise_level=0,  # Placeholder
         )
 
+    async def stream_analyze(
+        self,
+        transcript: Optional[str] = None,
+        audio: Optional[bytes] = None,
+        meta: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Stream audio quality analysis with incremental results.
+        
+        Yields:
+        - Coarse phase: Quick preliminary metrics (duration, sample rate)
+        - Final phase: Complete quality assessment
+        """
+        if not audio:
+            logger.warning("No audio data provided to AudioAnalysisService.")
+            error_model = ErrorResponse(
+                error="No audio data provided.",
+                code=400,
+                details={},
+                suggestion="Upload a supported audio file (WAV, MP3, etc.)",
+            )
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": AudioQualityMetrics().model_dump(),
+                "gemini": None,
+                "errors": [error_model.model_dump()],
+                "partial": False,
+                "phase": "final",
+                "chunk_index": 0
+            }
+            return
+
+        try:
+            audio_segment = AudioSegment.from_file(io.BytesIO(audio))
+            
+            # Phase 1: Yield quick preliminary metrics (coarse)
+            quick_metrics = {
+                "duration": round(audio_segment.duration_seconds, 2),
+                "sample_rate": audio_segment.frame_rate,
+                "channels": audio_segment.channels,
+            }
+            
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": quick_metrics,
+                "gemini": None,
+                "errors": [],
+                "partial": True,
+                "phase": "coarse",
+                "chunk_index": 0
+            }
+            
+            # Phase 2: Complete analysis (final)
+            quality_metrics = self._assess_audio_quality(audio_segment)
+            logger.info("Audio quality analysis successful.")
+            
+            # Update meta with duration if not present
+            if meta and 'duration' not in meta:
+                meta['duration'] = quality_metrics.duration
+
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": quality_metrics.model_dump(),
+                "gemini": None,
+                "errors": [],
+                "partial": False,
+                "phase": "final",
+                "chunk_index": 1
+            }
+        except Exception as e:
+            logger.error(f"Audio quality analysis failed: {e}", exc_info=True)
+            error_model = ErrorResponse(
+                error="Audio processing failed",
+                code=500,
+                details={"exception_str": str(e)},
+                suggestion="Ensure the uploaded file is a valid audio format and not corrupt.",
+            )
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": AudioQualityMetrics().model_dump(),
+                "gemini": None,
+                "errors": [error_model.model_dump()],
+                "partial": False,
+                "phase": "final",
+                "chunk_index": 0
+            }
+
     async def analyze(
         self,
         transcript: Optional[str] = None,
         audio: Optional[bytes] = None,
         meta: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Analyzes the audio bytes to determine quality metrics."""
+        """Analyzes the audio bytes to determine quality metrics (non-streaming)."""
         if not audio:
             logger.warning("No audio data provided to AudioAnalysisService.")
             # Return a structured error using the ErrorResponse model so the API

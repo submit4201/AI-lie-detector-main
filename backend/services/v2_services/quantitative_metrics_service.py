@@ -465,8 +465,91 @@ class QuantitativeMetricsService(AnalysisService):
             return NumericalLinguisticMetrics() # Return default if no text
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
+    async def stream_analyze(
+        self,
+        transcript: Optional[str] = None,
+        audio: Optional[bytes] = None,
+        meta: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Stream quantitative metrics analysis with incremental results.
+        
+        Yields:
+        - Coarse phase: Quick numerical linguistic metrics
+        - Final phase: Complete metrics including Gemini interaction analysis
+        """
+        meta = meta or {}
+        audio_bytes = audio or self.audio_data
+        
+        # Extract metadata
+        audio_duration_seconds = meta.get("duration")
+        speaker_diarization = meta.get("speaker_diarization")
+        sentiment_trend_data_input = meta.get("sentiment_trend")
+        
+        logger.info(f"Starting v2 streaming analysis for transcript. Duration: {audio_duration_seconds}s")
+        
+        # Phase 1: Yield quick numerical linguistic metrics (coarse)
+        try:
+            numerical_linguistic_metrics = await self.get_numerical_linguistic_metrics(
+                transcript or "", 
+                audio_duration_seconds
+            )
+            
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": {
+                    "numerical_linguistic_metrics": numerical_linguistic_metrics.__dict__ if hasattr(numerical_linguistic_metrics, '__dict__') else {},
+                    "transcript_length": len(transcript or ""),
+                    "audio_duration": audio_duration_seconds
+                },
+                "gemini": {},
+                "errors": [],
+                "partial": True,
+                "phase": "coarse",
+                "chunk_index": 0
+            }
+        except Exception as e:
+            logger.error(f"Numerical linguistic metrics calculation failed: {e}", exc_info=True)
+            numerical_linguistic_metrics = NumericalLinguisticMetrics()
+        
+        # Phase 2: Add Gemini interaction analysis (final)
+        try:
+            interaction_metrics = await self.analyze_interaction_metrics(
+                text=transcript or "",
+                audio_data=audio_bytes,
+                speaker_diarization=speaker_diarization,
+                sentiment_trend_data_input=sentiment_trend_data_input,
+                audio_duration_seconds=audio_duration_seconds,
+            )
+        except Exception as e:
+            logger.error(f"Interaction metrics analysis failed: {e}", exc_info=True)
+            interaction_metrics = self._fallback_interaction_analysis(
+                transcript or "", 
+                speaker_diarization, 
+                sentiment_trend_data_input, 
+                audio_duration_seconds
+            )
+            
+        yield {
+            "service_name": self.serviceName,
+            "service_version": self.serviceVersion,
+            "local": {
+                "numerical_linguistic_metrics": numerical_linguistic_metrics.__dict__ if hasattr(numerical_linguistic_metrics, '__dict__') else {},
+                "transcript_length": len(transcript or ""),
+                "audio_duration": audio_duration_seconds
+            },
+            "gemini": {
+                "interaction_metrics": interaction_metrics.__dict__ if hasattr(interaction_metrics, '__dict__') else {}
+            },
+            "errors": [],
+            "partial": False,
+            "phase": "final",
+            "chunk_index": 1
+        }
+    
     async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> Dict[str, Any]:
-        """Performs full analysis returning both interaction and numerical linguistic metrics."""
+        """Performs full analysis returning both interaction and numerical linguistic metrics (non-streaming)."""
         # Use provided audio if available, otherwise use instance audio_data
         audio_bytes = audio or self.audio_data
         
