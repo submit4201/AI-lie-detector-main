@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { UploadCloud, Mic, Loader2, StopCircle, Download, Settings } from "lucide-react";
 
-const ControlPanel = ({
+  const ControlPanel = ({
   file,
   setFile,
   loading,
@@ -24,6 +24,9 @@ const ControlPanel = ({
   updateAnalysisResult,
   useStreaming,
   setUseStreaming,
+  useV2,
+  setUseV2,
+  v2Available,
   isStreamingConnected,
   streamingProgress,
 }) => {
@@ -161,6 +164,17 @@ const ControlPanel = ({
                 />
                 <span className="text-white">Enable Real-time Streaming Analysis</span>
               </label>
+              <label htmlFor="v2-checkbox" className="flex items-center gap-3 cursor-pointer ml-4">
+                <input
+                  type="checkbox"
+                  id="v2-checkbox"
+                  checked={Boolean(useV2)}
+                  className="w-4 h-4 rounded border-white/30 bg-white/10 text-blue-500 focus:ring-blue-500 focus:ring-offset-0"
+                  onChange={(e) => setUseV2 && setUseV2(e.target.checked)}
+                  disabled={v2Available === false}
+                />
+                <span className="text-white">Use V2 streaming API</span>
+              </label>
               
               {useStreaming && (
                 <div className="ml-auto text-sm text-white/70">
@@ -176,6 +190,9 @@ const ControlPanel = ({
                   <span className="text-white text-sm">{streamingProgress}</span>
                 </div>
               </div>
+            )}
+            {v2Available === false && (
+              <div className="mt-2 text-xs text-gray-300">V2 streaming API not available on the server.</div>
             )}
           </div>
 

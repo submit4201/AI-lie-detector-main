@@ -53,5 +53,23 @@ Transcript:
             }
 
     async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None) -> AsyncGenerator[Dict[str, Any], None]:
+        prompt = f"Analyze the argument structure of the following transcript and return JSON matching the ArgumentAnalysis model.\nTranscript:\n\"{transcript}\"\n"
+        try:
+            if hasattr(self.gemini_client, 'json_stream'):
+                async for chunk in self.gemini_client.json_stream(prompt, audio_bytes=audio):
+                    data = chunk.get('data') or {}
+                    yield {
+                        "service_name": self.serviceName,
+                        "service_version": self.serviceVersion,
+                        "local": {},
+                        "gemini": data,
+                        "errors": None,
+                    }
+                final = await self.analyze(transcript, audio, meta)
+                yield final
+                return
+        except Exception:
+            pass
+
         result = await self.analyze(transcript, audio, meta)
         yield result

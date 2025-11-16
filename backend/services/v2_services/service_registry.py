@@ -53,6 +53,9 @@ def build_service_instances(
         "audio": audio,
         "meta": meta or {},
     }
+    # Optionally include analysis_context set by the runner
+    if meta and meta.get("analysis_context") is not None:
+        context["analysis_context"] = meta.get("analysis_context")
 
     active_factories = list(factories) if factories is not None else DEFAULT_SERVICE_FACTORIES
     return [factory(context) for factory in active_factories]
@@ -94,4 +97,6 @@ REGISTERED_SERVICES: List[Callable[[Dict[str, Any]], AnalysisService]] = [
     SERVICE_FACTORIES["transcription"],
     SERVICE_FACTORIES["audio_analysis"],
     SERVICE_FACTORIES["quantitative_metrics"],
+    SERVICE_FACTORIES["manipulation"],
+    SERVICE_FACTORIES["argument"],
 ]

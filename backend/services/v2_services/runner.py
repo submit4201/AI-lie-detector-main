@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Any, Optional, List, AsyncGenerator, Tuple
 
 from backend.services.v2_services.analysis_protocol import AnalysisService
+from backend.services.v2_services.analysis_context import AnalysisContext
 from backend.services.v2_services.gemini_client import GeminiClientV2
 from backend.services.v2_services.service_registry import build_service_instances, ServiceFactory, REGISTERED_SERVICES
 
@@ -40,6 +41,8 @@ class V2AnalysisRunner:
         3. Aggregates and returns the results.
         """
         meta = meta or {}
+        # Create the per-request AnalysisContext and attach it to meta
+        meta.setdefault("analysis_context", AnalysisContext(audio_bytes=audio))
         results: Dict[str, Any] = {
             "services": {},
             "errors": [],
@@ -123,16 +126,22 @@ class V2AnalysisRunner:
         """Yield incremental service results for streaming responses."""
 
         meta = meta or {}
+        # Create AnalysisContext and inject it to the meta
+        ctx = AnalysisContext(audio_bytes=audio)
+        meta.setdefault("analysis_context", ctx)
         # If the transcription service provides a streaming interface, use it
         transcript_text, generated = transcript, False
         if self.transcription_service and hasattr(self.transcription_service, 'stream_analyze') and audio:
             # Stream transcript events and yield interim updates
+            # Start transcription streaming; updates to ctx.transcript_partial are expected
             async for ev in self.transcription_service.stream_analyze(transcript=transcript, audio=audio, meta=meta):
                 # The streaming service may return updates for different services
                 svc = ev.get('service_name', 'transcription')
                 if ev.get('interim'):
                     # If partial transcript is present, forward as a transcript event
                     if ev.get('partial_transcript') is not None:
+                        # Forward updated partial transcript
+                        meta['analysis_context'].update_transcript_partial(ev.get('partial_transcript', ''))
                         yield {
                             "event": "analysis.update",
                             "service": "transcript",
@@ -152,6 +161,10 @@ class V2AnalysisRunner:
                     if svc == 'transcription' or payload.get('transcript'):
                         transcript_text = payload.get('transcript', transcript_text)
                         generated = True
+                        try:
+                            meta['analysis_context'].finalize_transcript(transcript_text)
+                        except Exception:
+                            pass
                         yield {
                             "event": "analysis.update",
                             "service": "transcript",
@@ -186,35 +199,116 @@ class V2AnalysisRunner:
         }
 
         services = self._build_services(transcript_text, audio, meta)
-        tasks = [
-            asyncio.create_task(self._execute_service(service, transcript_text, audio, meta))
-            for service in services
-        ]
+        # Phase orchestration: start audio and transcription then metrics then higher-level services
+        # Build the ordered tasks list ensuring audio and transcription are not re-run.
+        services_map = {s.serviceName: s for s in services}
+        # Start all non-audio/transcription services; but prioritize core ones
+        ordered = [s for s in services if s.serviceName not in ("transcription", "audio_analysis")]
+        priority = ["quantitative_metrics", "manipulation", "argument"]
+
+        def _priority_key(svc: AnalysisService):
+            try:
+                idx = priority.index(svc.serviceName)
+                return (0, idx)
+            except ValueError:
+                return (1, 0)
+
+        ordered.sort(key=_priority_key)
+        # Start tasks concurrently — individual services can use analysis_context for partials
+        # Use an event queue to stream incremental service results from service.stream_analyze
+        event_queue: "asyncio.Queue" = asyncio.Queue()
+
+        async def _service_stream_to_queue(service: AnalysisService):
+            try:
+                if hasattr(service, 'stream_analyze'):
+                    async for partial in service.stream_analyze(transcript_text, audio, meta):
+                        await event_queue.put({
+                            "type": "partial",
+                            "service": service.serviceName,
+                            "payload": partial,
+                        })
+                    # After stream finishes we should attempt a final call to ensure consistency
+                    final_payload = await service.analyze(transcript_text, audio, meta)
+                    await event_queue.put({"type": "final", "service": service.serviceName, "payload": final_payload})
+                    return service.serviceName, final_payload, None
+                else:
+                    final_payload = await service.analyze(transcript_text, audio, meta)
+                    await event_queue.put({"type": "final", "service": service.serviceName, "payload": final_payload})
+                    return service.serviceName, final_payload, None
+            except Exception as ex:
+                await event_queue.put({"type": "error", "service": service.serviceName, "payload": str(ex)})
+                logger.error(f"Service {service.serviceName} failed: {ex}", exc_info=True)
+                return service.serviceName, {}, str(ex)
+
+        # Start audio analysis (if present) immediately so it can emit partials
+        tasks = []
+        if self.audio_analysis_service and self.audio_analysis_service.serviceName in services_map:
+            tasks.append(asyncio.create_task(_service_stream_to_queue(services_map[self.audio_analysis_service.serviceName])))
+
+        # Start other services (metrics, manipulation, argument)
+        tasks.extend(asyncio.create_task(_service_stream_to_queue(service)) for service in ordered)
 
         total = len(tasks) if tasks else 1
         completed = 0
 
-        for task in asyncio.as_completed(tasks):
-            service_name, payload, error_message = await task
-            aggregate["services"][service_name] = payload
-            if error_message:
-                aggregate["errors"].append({"service": service_name, "message": error_message})
+        # Consume events from the queue until all tasks complete
+        pending = set(tasks)
+        while pending or not event_queue.empty():
+            try:
+                ev = await asyncio.wait_for(event_queue.get(), timeout=1.0)
+            except asyncio.TimeoutError:
+                # Check if tasks finished without emitting new events
+                new_pending = {t for t in pending if not t.done()}
+                if not new_pending and event_queue.empty():
+                    break
+                pending = new_pending
+                continue
 
-            completed += 1
+            ttype = ev.get("type")
+            svc = ev.get("service")
+            payload = ev.get("payload")
 
-            yield {
-                "event": "analysis.update",
-                "service": service_name,
-                "payload": payload,
-                "errors": error_message,
-            }
+            if ttype == "partial":
+                # Emit incremental update for service
+                yield {"event": "analysis.update", "service": svc, "payload": payload}
+                continue
 
-            yield {
-                "event": "analysis.progress",
-                "service": service_name,
-                "completed": completed,
-                "total": total,
-            }
+            if ttype in ("final", "error"):
+                # find and remove the finished task
+                # mark aggregate
+                aggregate["services"][svc] = payload
+                if ttype == "error":
+                    aggregate["errors"].append({"service": svc, "message": payload})
+
+                # Try to locate the task that returned this service
+                done_task = None
+                for t in list(pending):
+                    if t.done():
+                        try:
+                            res = t.result()
+                            if res and res[0] == svc:
+                                done_task = t
+                                break
+                        except Exception:
+                            continue
+                if done_task:
+                    pending.remove(done_task)
+
+                completed += 1
+
+                yield {
+                    "event": "analysis.update",
+                    "service": svc,
+                    "payload": payload,
+                }
+
+                yield {
+                    "event": "analysis.progress",
+                    "service": svc,
+                    "completed": completed,
+                    "total": len(tasks),
+                }
+            # already handled above when processing final/error events
 
         yield {
             "event": "analysis.done",

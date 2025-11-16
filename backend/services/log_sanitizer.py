@@ -116,7 +116,8 @@ def sanitize_api_response(response_data: Dict[str, Any]) -> str:
     Returns:
         A sanitized string representation
     """
-    if not response_data:
+    # Only treat None as an empty response; allow empty dicts to show structure
+    if response_data is None:
         return "Empty response"
     
     # Create a sanitized version showing only structure

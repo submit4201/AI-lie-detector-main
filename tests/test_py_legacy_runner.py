@@ -18,7 +18,15 @@ ids = [p.name for p in legacy_scripts]
 def test_legacy_script_runs(script_path):
     """Run a legacy test script as a subprocess and assert it exits with code 0."""
     # Run the script with the project root as cwd so imports using relative paths work.
-    proc = subprocess.run([sys.executable, str(script_path)], cwd=ROOT, capture_output=True, text=True, timeout=300)
+    env = None
+    try:
+        import os
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "utf-8"
+    except Exception:
+        env = None
+
+    proc = subprocess.run([sys.executable, str(script_path)], cwd=ROOT, capture_output=True, text=True, timeout=300, env=env)
 
     # Print captured output for debugging in pytest logs
     if proc.stdout:

@@ -15,7 +15,7 @@ import json
 import logging
 import random
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, AsyncGenerator
 
 try:
     import google_genai as genai  # type: ignore[import-not-found]
@@ -286,6 +286,95 @@ class GeminiClientV2:
         except Exception as e:
             logger.error("Gemini structured query failed", exc_info=True)
             return create_fallback_response(str(e))
+
+    async def json_stream(self, prompt: str, *, schema: Optional[Dict[str, Any]] = None, audio_bytes: Optional[bytes] = None, model_hint: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+        """Structured JSON streaming helper.
+
+        If the SDK supports live streaming, this will attempt to open a live session and
+        parse JSON chunks from messages. Otherwise it will fall back to a simulated
+        streaming behavior using `query_json_schema` or `query_json` and yield small
+        partial JSON dicts to the consumer.
+        """
+        # Try the live, streaming path first
+        try:
+            client = None
+            if hasattr(self._sdk_client, 'aio'):
+                client = self._sdk_client
+            elif hasattr(genai, 'Client'):
+                client = genai.Client(api_key=self.api_key)
+
+            if client and hasattr(client, 'aio') and hasattr(client.aio, 'live') and hasattr(client.aio.live, 'chat'):
+                model_name = await self.choose_model(model_hint or GEMINI_MODEL_STRUCTURED)
+                async with client.aio.live.chat.connect(model=model_name) as session:
+                    # Send the initial prompt and optionally the audio as a blob
+                    _types = getattr(client, 'types', None) or getattr(genai, 'types', None)
+                    contents = []
+                    if _types is not None:
+                        parts = []
+                        parts.append(_types.Part(text=prompt))
+                        if audio_bytes:
+                            parts.append(_types.Part(blob=_types.Blob(mime_type='audio/wav', data=audio_bytes)))
+                        contents.append(_types.Content(parts=parts))
+                    else:
+                        contents.append(prompt)
+
+                    await session.send_message(contents=contents)
+
+                    chunk_index = 0
+                    async for message in session.receive():
+                        for candidate in getattr(message, 'candidates', []) or []:
+                            for part in getattr(getattr(candidate, 'content', None), 'parts', []) or []:
+                                text = getattr(part, 'text', None)
+                                if not text:
+                                    continue
+                                text = text.strip()
+                                # Try to parse JSON from the text
+                                try:
+                                    j = json.loads(text)
+                                    if isinstance(j, dict):
+                                        yield {"data": j, "chunk_index": chunk_index, "done": False}
+                                        chunk_index += 1
+                                        continue
+                                except Exception:
+                                    pass
+                                # Fallback: yield as text
+                                yield {"data": {"text": text}, "chunk_index": chunk_index, "done": False}
+                                chunk_index += 1
+
+                    # Emit done finalization
+                    yield {"data": {}, "chunk_index": chunk_index, "done": True}
+                    return
+        except Exception:
+            logger.debug("Live JSON streaming not available; falling back to simulated streaming.", exc_info=True)
+
+        # Simulated streaming fallback - call the structured generator and chunk
+        try:
+            if schema:
+                full = await self.query_json_schema(prompt, schema, model_hint=model_hint)
+            else:
+                full = await self.query_json(prompt, model_hint=model_hint)
+
+            # If the output is dict-like, split keys across several partial yields
+            if isinstance(full, dict):
+                items = list(full.items())
+                chunk_index = 0
+                # Yield coarse buckets of keys to simulate progressive refinement
+                for i in range(0, len(items), max(1, len(items) // 3)):
+                    part = dict(items[: i + max(1, len(items) // 3)])
+                    yield {"data": part, "chunk_index": chunk_index, "done": False}
+                    chunk_index += 1
+                # Final emit the full result
+                yield {"data": full, "chunk_index": chunk_index, "done": True}
+                return
+            # If raw text, chunk as lines
+            text = str(full)
+            lines = text.splitlines()
+            for idx, l in enumerate(lines):
+                yield {"data": {"text": l}, "chunk_index": idx, "done": False}
+            yield {"data": {"text": text}, "chunk_index": len(lines), "done": True}
+        except Exception as e:
+            logger.error("json_stream fallback failed", exc_info=True)
+            yield {"data": {"error": str(e)}, "chunk_index": 0, "done": True}
 
     async def transcribe(self, audio_bytes: bytes, *, model_hint: Optional[str] = None, mime_type: Optional[str] = None) -> str:
         if not audio_bytes:

@@ -328,3 +328,42 @@ def extract_features_from_data(audio_data: bytes, sample_rate: int, channels: in
     )
 
     return {**acoustic, **linguistic}
+
+
+#####
+# # #         "pitch_jitter": jitter if isinstance(jitter, float) else 0.0,
+#         "pitch_shimmer": shimmer if isinstance(shimmer, float) else 0.0,
+#         "pitch_range": pitch_range,
+#         "pitch_std": pitch_std,
+#         "pause_duration": pause_duration_total,
+#         "pause_count": pause_count,
+#         "loudness_variability": loudness_variability,
+#         "formant_range": formant_range,
+#         "formant_std": formant_std,
+#         "hnr_range": hnr_range,
+#         "hnr_std": hnr_std,
+#         "loudness_range": loudness_range,
+#         "loudness_std": loudness_std,
+#         "energy_range": energy_range,
+#         "energy_std": energy_std,
+#         "intensity_range": intensity_range,
+#         "intensity_std": intensity_std,
+#         "point_process_range": point_process_range,
+#         "point_process_std": point_process_std,
+#         "pronoun_ratio": pronouns / word_count if word_count > 0 else 0.0,
+#         "article_usage": articles / word_count if word_count > 0 else 0.0,
+#         "speech_rate": word_count / duration if duration > 0 else 0.0,  # Ensure duration > 0
+#         "sentence_length_avg": word_count / sent_count if sent_count > 0 else 0.0,
+#         "transcript_segment": text.strip(),  # Include the transcribed text segment, strip trailing space
+#         "nouns": nouns,
+#         "verbs": verbs,
+#         "adjectives": adjectives,
+#         "adverbs": adverbs
+#         # TODO: Add more linguistic features here
+#         # TODO: Add part of speech tagging
+#         # TODO: Add named entity recognition
+#         # TODO: Add sentiment analysis
+#         # TODO: Add emotion analysis
+#         # TODO: Add topic modeling
+#         # TODO: Add more complex analysis like syntax parsing, dependency parsing, etc.
+#####

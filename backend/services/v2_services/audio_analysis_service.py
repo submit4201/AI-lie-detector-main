@@ -105,6 +105,38 @@ class AudioAnalysisService(AnalysisService):
                 "errors": [error_model.model_dump()],
             }
 
+        async def stream_analyze(self, transcript: Optional[str] = None, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
+            """Yield a coarse audio summary immediately (if possible), then the full analysis."""
+            if not audio:
+                # No audio -> just run analyze path
+                yield await self.analyze(transcript, audio, meta or {})
+                return
+
+            # Quick, lightweight audio heuristics: length and sample rate if accessible
+            try:
+                audio_segment = AudioSegment.from_file(io.BytesIO(audio))
+                duration = round(audio_segment.duration_seconds, 2)
+                initial = {
+                    "service_name": self.serviceName,
+                    "service_version": self.serviceVersion,
+                    "local": {"duration": duration},
+                    "gemini": None,
+                    "errors": None,
+                }
+                # Update analysis context
+                if meta and meta.get("analysis_context"):
+                    try:
+                        meta.get("analysis_context").audio_summary.update({"duration": duration})
+                    except Exception:
+                        pass
+                yield initial
+            except Exception:
+                # Fall through to final analysis which will produce a proper error
+                pass
+
+            # Final result
+            yield await self.analyze(transcript, audio, meta or {})
+
         try:
             audio_segment = AudioSegment.from_file(io.BytesIO(audio))
             quality_metrics = self._assess_audio_quality(audio_segment)

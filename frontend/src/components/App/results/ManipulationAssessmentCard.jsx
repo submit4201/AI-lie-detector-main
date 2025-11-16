@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
+import ConfidenceChip from '@/components/ui/ConfidenceChip';
+import Tooltip from '@/components/ui/tooltip';
 
 const ListItem = ({ item }) => (
   <li className="text-gray-300 text-sm bg-black/20 p-2 rounded-md border border-white/10">
@@ -41,14 +43,17 @@ const ManipulationAssessmentCard = ({ assessment }) => {
               ></div>
             </div>
             <span className="text-purple-200 font-bold">{manipulation_score}/100</span>
+            <ConfidenceChip value={manipulation_score} />
           </div>
         </div>
 
         <div>
           <h4 className="text-md font-semibold text-purple-300 mb-2">Identified Tactics</h4>
-          {manipulation_tactics.length > 0 ? (
+            {manipulation_tactics.length > 0 ? (
             <ul className="space-y-1 list-disc list-inside pl-1">
-              {manipulation_tactics.map((tactic, index) => <ListItem key={index} item={tactic} />)}
+              {manipulation_tactics.map((tactic, index) => (
+                <ListItem key={index} item={<Tooltip text={typeof tactic === 'string' ? `Tactic: ${tactic}` : 'Tactic'}>{typeof tactic === 'string' ? tactic : JSON.stringify(tactic)}</Tooltip>} />
+              ))}
             </ul>
           ) : (
             <p className="text-gray-400 text-sm">None detected.</p>

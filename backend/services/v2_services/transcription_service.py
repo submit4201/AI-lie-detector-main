@@ -127,7 +127,13 @@ class TranscriptionService(AnalysisService):
                 svc_name = ev.get('service_name', self.serviceName)
                 if ev.get('interim'):
                     if 'partial_transcript' in ev:
-                        yield {"service_name": svc_name, "interim": True, "partial_transcript": ev.get('partial_transcript', "")}
+                        # Update runtime analysis_context if provided
+                        if meta and meta.get("analysis_context"):
+                            try:
+                                meta.get("analysis_context").update_transcript_partial(ev.get('partial_transcript', ""))
+                            except Exception:
+                                pass
+                        yield {"service_name": svc_name, "interim": True,"partial_transcript": ev.get('partial_transcript', "")}
                     elif 'payload' in ev:
                         yield {"service_name": svc_name, "interim": True, "payload": ev.get('payload')}
                 else:
@@ -139,6 +145,12 @@ class TranscriptionService(AnalysisService):
                         "local": {},
                         "gemini": None,
                     }
+                    # Update analysis context
+                    if meta and meta.get("analysis_context"):
+                        try:
+                            meta.get("analysis_context").finalize_transcript(ev.get('transcript', ""))
+                        except Exception:
+                            pass
                     yield {"service_name": svc_name, "interim": False, "payload": final_payload}
                     return
 
