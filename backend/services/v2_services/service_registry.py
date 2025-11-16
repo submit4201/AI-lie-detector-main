@@ -128,10 +128,7 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
     # All v1 services now have v2 equivalents + advanced credibility analysis
 }
 
+# Register all available v2 services by default, as per line 128 comment.
 REGISTERED_SERVICES: List[Callable[[Dict[str, Any]], AnalysisService]] = [
-    SERVICE_FACTORIES["transcription"],
-    SERVICE_FACTORIES["audio_analysis"],
-    SERVICE_FACTORIES["quantitative_metrics"],
-    SERVICE_FACTORIES["manipulation"],
-    SERVICE_FACTORIES["argument"],
+    SERVICE_FACTORIES[name] for name in SERVICE_FACTORIES
 ]
