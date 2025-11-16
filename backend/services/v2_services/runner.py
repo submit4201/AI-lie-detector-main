@@ -28,6 +28,13 @@ class AnalysisContext:
     audio_bytes: Optional[bytes] = None
     audio_summary: Dict[str, Any] = field(default_factory=dict)
     
+    # Enhanced metrics
+    acoustic_metrics: Optional[Dict[str, Any]] = None  # Enhanced acoustic metrics
+    linguistic_metrics: Optional[Dict[str, Any]] = None  # Enhanced linguistic metrics
+    
+    # Baseline and calibration
+    baseline_profile: Optional[Dict[str, Any]] = None  # User baseline for normalization
+    
     # Metrics and analysis results
     quantitative_metrics: Dict[str, Any] = field(default_factory=dict)
     service_results: Dict[str, Dict[str, Any]] = field(default_factory=dict)
