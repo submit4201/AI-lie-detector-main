@@ -101,8 +101,21 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
         transcript=context.get("transcript", ""),
         meta=context.get("meta", {}),
     ),
-    # Add other v2 services here as they are migrated
-    # e.g., "linguistic": lambda context: LinguisticService(**context),
+    "conversation_flow": lambda context: __import__('backend.services.v2_services.conversation_flow_service', fromlist=['ConversationFlowServiceV2']).ConversationFlowServiceV2(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "session_insights": lambda context: __import__('backend.services.v2_services.session_insights_service', fromlist=['SessionInsightsServiceV2']).SessionInsightsServiceV2(
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "linguistic": lambda context: __import__('backend.services.v2_services.linguistic_service', fromlist=['LinguisticServiceV2']).LinguisticServiceV2(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    # All v1 services now have v2 equivalents
 }
 
 REGISTERED_SERVICES: List[Callable[[Dict[str, Any]], AnalysisService]] = [
