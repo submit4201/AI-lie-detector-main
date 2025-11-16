@@ -114,7 +114,7 @@ class EnhancedAcousticService(AnalysisService):
                             f2_values.append(f2)
                         if f3 and not np.isnan(f3):
                             f3_values.append(f3)
-                    except:
+                    except Exception:
                         continue
                 
                 f1_mean = float(np.mean(f1_values)) if f1_values else None
