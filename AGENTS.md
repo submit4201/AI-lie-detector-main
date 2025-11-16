@@ -61,29 +61,75 @@ The repository utilizes pytest for running tests. Tests are organized in the `te
 
 ## Migration & v2 service design / expectations
 
+### V2 Streaming Architecture (CURRENT - Full Implementation)
+
+The v2 API is now the primary path with comprehensive streaming support:
+
+**Core Components:**
+- `AnalysisContext`: Central dataclass managing all analysis state without globals
+- `AnalysisService` protocol: `stream_analyze` is the primary method, `analyze` wraps it
+- `GeminiClientV2.json_stream`: Structured JSON streaming with Live/Simulated providers
+- `context_prompts.py`: Helper module for building prompts with strict JSON schemas
+- Phased orchestration: A→B→C→D (Input→Foundation→Metrics→HigherLevel)
+
+**Services:**
+- All services implement `stream_analyze` and return standardized shape:
+  ```python
+  {
+    "service_name": str,
+    "service_version": str,
+    "local": dict,        # Computed metrics
+    "gemini": dict,       # LLM insights
+    "errors": list,
+    "partial": bool,      # True for intermediate, False for final
+    "phase": str,         # "coarse", "refine", or "final"
+    "chunk_index": int | None
+  }
+  ```
+
+**Orchestration Flow:**
+1. **Phase A (Input)**: Create AnalysisContext with request data
+2. **Phase B (Foundation)**: Parallel transcription + audio analysis
+3. **Phase C (Metrics)**: Quantitative metrics once transcript threshold met
+4. **Phase D (Higher-Level)**: Parallel manipulation + argument analysis
+
+**SSE Events:**
+- `analysis.update`: Per-service partial or final results
+- `analysis.done`: Complete results with aggregated context
+
+See `STREAMING_EVENTS_V2.md` for comprehensive documentation.
+
 ### Migration Plan (v1 -> v2)
 
-- Implement v2 `AnalysisService` protocol (`backend/services/v2_services/analysis_protocol.py`) and migrate services to implement this interface.
-- Migrate `ManipulationService`, `ArgumentService`, `QuantitativeMetricsService`, and `AudioAnalysisService` to v2. Keep v1 code in `backend/services/archived/` until v2 is validated.
-- Ensure v2 services accept a `GeminiClientV2` to centralize LLM calls, and avoid global or per-service state to make services testable.
-- Add per-service unit tests first, then runner-level tests. Only archive v1 code after v2 provides matching or improved functionality and tests are green.
+- ✅ Implement v2 `AnalysisService` protocol (`backend/services/v2_services/analysis_protocol.py`)
+- ✅ Create `AnalysisContext` for state management without globals
+- ✅ Implement `json_stream` with provider abstraction
+- ✅ Migrate `ManipulationService`, `ArgumentService` to v2 streaming
+- ✅ `QuantitativeMetricsService`, `AudioAnalysisService`, `TranscriptionService` leverage existing streaming
+- ✅ Runner implements phased orchestration with `stream_run`
+- ✅ `run` method consumes `stream_run` for consistency
+- 🔄 Frontend migration to v2-only (in progress)
+- 📝 v1 code remains for compatibility until frontend migration complete
 
 ### Streaming and Real-time Transcription
 
-- Use Gemini (google-genai) streaming surfaces where available (`client.aio.live.chat.connect` for audio, `generate_content_stream` for text). See `structured_streaming_output_for_gemini_example.py` for a reference implementation and structured output examples.
-- Services should support an optional `stream_analyze(transcript, audio, meta)` async generator to yield incremental results. This allows the runner to stream partial transcripts and per-service progress to the frontend.
-- Prefer structured JSON output in streaming calls (e.g., JSON per chunk) rather than free-form text to make parsing reliable and reduce post-processing.
-- When SDK streaming is unavailable, implement a safe fallback that yields a small interim event followed by the final result (this preserves UX without breaking the connector).
-- Keep transcript partials short and avoid sending sensitive context or audio data in interim events.
+- Use Gemini (google-genai) streaming surfaces where available (`client.aio.live.chat.connect` for audio, `generate_content_stream` for text)
+- `json_stream` abstracts provider details (Live vs Simulated)
+- Services implement `stream_analyze` to yield incremental results
+- Structured JSON output per chunk for reliable parsing
+- Fallbacks: simulated streaming via chunked batch results when Live unavailable
+- Privacy: transcript partials are short, no sensitive context in logs
 
 ### v2 Service Protocol (Expectations)
 
 - Each v2 service must:
+  - Implement `stream_analyze` as primary method
   - Be idempotent and thread-safe (no global SDK state)
   - Accept `transcript: str`, `audio: Optional[bytes]`, `meta: Dict[str, Any]`
-  - Return a dict containing `service_name`, `service_version`, `local` and `gemini` keys (use `local` for metrics and `gemini` for LLM outputs)
-  - Provide `stream_analyze` if service benefits from incremental outputs (transcription, large LLM analysis)
-  - Not write raw transcripts or audio into logs; use sanitized contextual hashes or sizes only
+  - Use `meta["analysis_context"]` for AnalysisContext instance
+  - Return standardized dict with `service_name`, `service_version`, `local`, `gemini`, `errors`, `partial`, `phase`, `chunk_index`
+  - Provide real streaming when beneficial, minimum pseudo-stream (coarse→final)
+  - Not write raw transcripts or audio into logs; use sanitized hashes/sizes only
 
 ### Archiving v1
 
