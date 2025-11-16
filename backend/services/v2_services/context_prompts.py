@@ -103,6 +103,21 @@ def build_manipulation_prompt(ctx: "AnalysisContext", phase: str = "coarse") -> 
         "required": ["overall_risk_score", "confidence", "manipulation_patterns", "tactics", "rationale"]
     }
     
+    # Check if audio is available to add audio analysis reminder
+    audio_reminder = ""
+    if ctx.audio_bytes or ctx.audio_summary:
+        audio_reminder = """
+IMPORTANT: Audio data is available for this analysis. When analyzing, pay close attention to:
+- Vocal tone and emotional inflections
+- Speaking pace and rhythm changes
+- Hesitations, pauses, and stammering
+- Pitch variations and stress patterns
+- Voice quality indicators (trembling, shakiness, confidence)
+- Prosodic features that may indicate deception or manipulation
+
+Use both the transcript text AND the audio characteristics to inform your analysis.
+"""
+    
     prompt = f"""Analyze the following transcript for signs of manipulation and deception.
 
 Transcript:
@@ -110,7 +125,7 @@ Transcript:
 
 Context information:
 {_format_context(context_report)}
-
+{audio_reminder}
 Phase: {phase}
 {"This is an early coarse analysis. Focus on obvious patterns." if phase == "coarse" else "This is the final detailed analysis. Be thorough."}
 
@@ -194,6 +209,21 @@ def build_argument_prompt(ctx: "AnalysisContext", phase: str = "coarse") -> Tupl
         "required": ["claims", "logical_fallacies", "argument_quality"]
     }
     
+    # Check if audio is available to add audio analysis reminder
+    audio_reminder = ""
+    if ctx.audio_bytes or ctx.audio_summary:
+        audio_reminder = """
+IMPORTANT: Audio data is available for this analysis. When analyzing, pay close attention to:
+- Vocal tone and emotional inflections
+- Speaking pace and rhythm changes
+- Hesitations, pauses, and stammering
+- Pitch variations and stress patterns
+- Voice quality indicators (trembling, shakiness, confidence)
+- Prosodic features that may reveal argument weakness or uncertainty
+
+Use both the transcript text AND the audio characteristics to inform your analysis.
+"""
+    
     prompt = f"""Analyze the logical structure and argumentation in the following transcript.
 
 Transcript:
@@ -201,7 +231,7 @@ Transcript:
 
 Context information:
 {_format_context(context_report)}
-
+{audio_reminder}
 Phase: {phase}
 {"This is an early coarse analysis. Identify main claims and obvious issues." if phase == "coarse" else "This is the final detailed analysis. Provide comprehensive argument mapping."}
 
