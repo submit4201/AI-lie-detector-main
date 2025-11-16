@@ -86,6 +86,21 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
         transcript=context.get("transcript", ""),
         meta=context.get("meta", {}),
     ),
+    "speaker_attitude": lambda context: __import__('backend.services.v2_services.speaker_attitude_service', fromlist=['SpeakerAttitudeServiceV2']).SpeakerAttitudeServiceV2(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "psychological": lambda context: __import__('backend.services.v2_services.psychological_service', fromlist=['PsychologicalServiceV2']).PsychologicalServiceV2(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "enhanced_understanding": lambda context: __import__('backend.services.v2_services.enhanced_understanding_service', fromlist=['EnhancedUnderstandingServiceV2']).EnhancedUnderstandingServiceV2(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
     # Add other v2 services here as they are migrated
     # e.g., "linguistic": lambda context: LinguisticService(**context),
 }
