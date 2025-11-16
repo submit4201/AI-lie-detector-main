@@ -105,12 +105,56 @@ class TranscriptionService(AnalysisService):
         if hasattr(self.gemini_client, 'transcribe_stream') and audio:
             chunk_index = 0
             async for ev in self.gemini_client.transcribe_stream(audio, context_prompt=None):
+<<<<<<< HEAD
                 # Interim partial updates from the streaming client
                 if ev.get('interim'):
                     # Prefer an explicit partial_transcript field, fall back to payload
                     partial_text = ev.get('partial_transcript') or ev.get('payload') or ""
                     # Update runtime analysis_context if provided
                     if ctx:
+=======
+                if ev.get('interim'):
+                    if 'partial_transcript' in ev:
+                        # Update runtime analysis_context if provided
+                        if meta and meta.get("analysis_context"):
+                            try:
+                                meta.get("analysis_context").update_transcript_partial(ev.get('partial_transcript', ""))
+                            except Exception:
+                                pass
+                        yield {"service_name": svc_name, "interim": True,"partial_transcript": ev.get('partial_transcript', "")}
+                    elif 'payload' in ev:
+                        yield {"service_name": svc_name, "interim": True, "payload": ev.get('payload')}
+                else:
+                    final_payload = {
+                        "service_name": self.serviceName,
+                        "service_version": self.serviceVersion,
+                        "local": {"partial_transcript": partial_text},
+                        "gemini": None,
+                        "errors": None,
+                        "partial": True,
+                        "phase": "coarse",
+                        "chunk_index": chunk_index,
+                    }
+                    chunk_index += 1
+                else:
+                    # Final transcript
+                    final_text = ev.get('transcript', "")
+                    if ctx:
+                        ctx.transcript_final = final_text
+                    
+                    yield {
+                        "service_name": self.serviceName,
+                        "service_version": self.serviceVersion,
+                        "local": {"transcript": final_text},
+                        "gemini": None,
+                        "errors": None,
+                        "partial": False,
+                        "phase": "final",
+                        "chunk_index": chunk_index,
+                    }
+                    # Update analysis context
+                    if meta and meta.get("analysis_context"):
+>>>>>>> 5b97954 (Fix runner orchestration and transcription service streaming format)
                         try:
                             # Try common update method first, fall back to attribute set
                             if hasattr(ctx, "update_transcript_partial"):
