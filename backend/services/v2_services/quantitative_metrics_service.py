@@ -111,7 +111,8 @@ class QuantitativeMetricsService(AnalysisService):
         # Placeholder for calculated formality and complexity - requires more sophisticated algorithms
         formality_score_calculated = 50.0 # Default placeholder
         complexity_score_calculated = 50.0 # Default placeholder
-        NumericalLinguisticMetrics(
+        
+        metrics = NumericalLinguisticMetrics(
             word_count=word_count,
             unique_word_count=unique_word_count,
             hesitation_marker_count=hesitation_marker_count,
@@ -129,9 +130,8 @@ class QuantitativeMetricsService(AnalysisService):
             formality_score_calculated=formality_score_calculated,
             complexity_score_calculated=complexity_score_calculated
         )
-        self.NumericalLinguisticMetrics = NumericalLinguisticMetrics
 
-        return self.NumericalLinguisticMetrics
+        return metrics
 
     @staticmethod
     def _normalize_sentiment_trend(
@@ -494,11 +494,19 @@ class QuantitativeMetricsService(AnalysisService):
                 audio_duration_seconds
             )
             
+            # Convert to dict safely
+            if hasattr(coarse_numerical, 'model_dump'):
+                numerical_dict = coarse_numerical.model_dump()
+            elif hasattr(coarse_numerical, '__dict__'):
+                numerical_dict = coarse_numerical.__dict__
+            else:
+                numerical_dict = {}
+            
             coarse_local = {
-                "numerical_linguistic_metrics": coarse_numerical.__dict__ if hasattr(coarse_numerical, '__dict__') else {},
+                "numerical_linguistic_metrics": numerical_dict,
                 "transcript_length": len(effective_transcript or ""),
                 "audio_duration": audio_duration_seconds,
-                "word_count": coarse_numerical.word_count if coarse_numerical else 0,
+                "word_count": numerical_dict.get("word_count", 0),
             }
             
             # Update context with coarse metrics
