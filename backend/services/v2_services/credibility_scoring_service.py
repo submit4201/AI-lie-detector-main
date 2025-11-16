@@ -261,14 +261,22 @@ class CredibilityScoringService(AnalysisService):
         
         # Calculate composite scores
         # Physiological load: acoustic metrics
+<<<<<<< HEAD
         acoustic_z = [c.z_score for c in contributions if c.z_score is not None and ('pitch' in c.metric_name or 'hnr' in c.metric_name or 'formant' in c.metric_name)]
+=======
+        acoustic_z = [c.z_score for c in contributions if c.z_score and 'pitch' in c.metric_name or 'hnr' in c.metric_name or 'formant' in c.metric_name]
+>>>>>>> d02269f (Add CredibilityScoringService with baseline-normalized z-score analysis)
         if acoustic_z:
             physiological_load = min(100, max(0, 50 + np.mean(acoustic_z) * 20))
         else:
             physiological_load = None
         
         # Cognitive load: linguistic + temporal metrics
+<<<<<<< HEAD
         cognitive_z = [c.z_score for c in contributions if c.z_score is not None and ('hesitation' in c.metric_name or 'pause' in c.metric_name or 'speech_rate' in c.metric_name)]
+=======
+        cognitive_z = [c.z_score for c in contributions if c.z_score and ('hesitation' in c.metric_name or 'pause' in c.metric_name or 'speech_rate' in c.metric_name)]
+>>>>>>> d02269f (Add CredibilityScoringService with baseline-normalized z-score analysis)
         if cognitive_z:
             cognitive_load = min(100, max(0, 50 + np.mean(cognitive_z) * 20))
         else:

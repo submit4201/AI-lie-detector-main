@@ -164,7 +164,11 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
         audio_data=context.get("audio"),
         meta=context.get("meta", {}),
     ),
+<<<<<<< HEAD
     "credibility_scoring": lambda context: _lazy_import_credibility_scoring_service()(
+=======
+    "credibility_scoring": lambda context: __import__('backend.services.v2_services.credibility_scoring_service', fromlist=['CredibilityScoringService']).CredibilityScoringService(
+>>>>>>> d02269f (Add CredibilityScoringService with baseline-normalized z-score analysis)
         baseline_profile=context.get("meta", {}).get("baseline_profile"),
         transcript=context.get("transcript", ""),
         meta=context.get("meta", {}),
