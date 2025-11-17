@@ -467,20 +467,7 @@ class QuantitativeMetricsService(AnalysisService):
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
     async def _stream_analyze_core(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]):
-        """Core streaming analyzer that yields coarse and final analysis results.
-        
-        This is the internal async generator that performs the actual streaming analysis.
-        It yields intermediate "coarse" results followed by a final result when sufficient
-        data is available.
-        
-        Args:
-            transcript: Input transcript text (may be partial or empty)
-            audio: Optional raw audio bytes
-            meta: Metadata dict including "analysis_context" with AnalysisContext instance
-            
-        Yields:
-            Dicts with standardized v2 result shape including partial/phase/chunk_index
-        """
+        """Performs full streaming analysis returning both interaction and numerical linguistic metrics as an async generator."""
         # Use provided audio if available, otherwise use instance audio_data
         audio_bytes = audio or self.audio_data
         
@@ -497,6 +484,7 @@ class QuantitativeMetricsService(AnalysisService):
         # Get effective transcript from context if available
         effective_transcript = transcript
         is_partial = True
+        ctx = getattr(self, "context", None)
         if ctx:
             effective_transcript = ctx.transcript_final or ctx.transcript_partial or transcript
             is_partial = ctx.transcript_final is None
@@ -641,19 +629,15 @@ class QuantitativeMetricsService(AnalysisService):
         }
 
     async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
-        """Stream analysis yielding coarse and final results.
-        
-        This is the primary streaming interface that delegates to the core implementation.
-        Context retrieval and effective transcript determination are handled in the core method.
-        
-        Args:
-            transcript: Input transcript text
-            audio: Optional raw audio bytes
-            meta: Optional metadata dict
-            
-        Yields:
-            Analysis result dicts with partial/phase/chunk_index
-        """
-        meta = meta or {}
-        async for chunk in self._stream_analyze_core(transcript, audio, meta):
+        """Top-level stream_analyze that delegates to the internal streaming core implementation."""
+        # Prefer delegating to the core streaming implementation which yields structured chunks.
+        final_text = transcript
+        ctx = None
+        if meta:
+            ctx = meta.get("analysis_context")
+            # If context has a finalized transcript prefer that
+            final_text = transcript or (getattr(ctx, "transcript_final", None) or transcript)
+
+        # Delegate to the core async generator
+        async for chunk in self._stream_analyze_core(final_text, audio, meta or {}):
             yield chunk
