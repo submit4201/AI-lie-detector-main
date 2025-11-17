@@ -1,6 +1,86 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "python3 is required but not found in PATH." >&2
+  exit 1
+fi
+
+MODE="${START_WORKSPACE_MODE:-run}"
+MODE_FROM_ARGS=0
+
+if [[ -n "${CI:-}" && -z "${START_WORKSPACE_SKIP_PYENV+x}" ]]; then
+  SKIP_PYENV="1"
+else
+  SKIP_PYENV="${START_WORKSPACE_SKIP_PYENV:-0}"
+fi
+
+if [[ -n "${CI:-}" && -z "${START_WORKSPACE_INSTALL_DEV+x}" ]]; then
+  INSTALL_DEV_REQS="1"
+else
+  INSTALL_DEV_REQS="${START_WORKSPACE_INSTALL_DEV:-0}"
+fi
+
+if [[ -n "${CI:-}" && -z "${START_WORKSPACE_NPM_CI+x}" ]]; then
+  USE_NPM_CI="1"
+else
+  USE_NPM_CI="${START_WORKSPACE_NPM_CI:-0}"
+fi
+
+for arg in "$@"; do
+  case "$arg" in
+    --install-only|--install)
+      MODE="install"
+      MODE_FROM_ARGS=1
+      ;;
+    --run)
+      MODE="run"
+      MODE_FROM_ARGS=1
+      ;;
+    --skip-pyenv)
+      SKIP_PYENV="1"
+      ;;
+    --force-pyenv)
+      SKIP_PYENV="0"
+      ;;
+    --install-dev)
+      INSTALL_DEV_REQS="1"
+      ;;
+    --no-install-dev)
+      INSTALL_DEV_REQS="0"
+      ;;
+    --npm-ci)
+      USE_NPM_CI="1"
+      ;;
+    --npm-install)
+      USE_NPM_CI="0"
+      ;;
+    -h|--help)
+      cat <<'USAGE'
+Usage: ./start_workspace.sh [options]
+
+Options:
+  --install-only, --install   Install dependencies only (default in CI)
+  --run                       Install and launch backend/frontend dev servers
+  --skip-pyenv                Do not enforce Python installation via pyenv
+  --force-pyenv               Enforce Python 3.11 via pyenv when missing
+  --install-dev               Install backend requirements-dev.txt
+  --no-install-dev            Skip backend dev dependencies
+  --npm-ci                    Use 'npm ci' for frontend dependencies
+  --npm-install               Use 'npm install' for frontend dependencies
+  -h, --help                  Show this message
+
+Environment variables mirror the options above (e.g. START_WORKSPACE_NPM_CI=1).
+USAGE
+      exit 0
+      ;;
+  esac
+done
+
+if [[ "$MODE_FROM_ARGS" -eq 0 && -n "${CI:-}" && -z "${START_WORKSPACE_MODE+x}" ]]; then
+  MODE="install"
+fi
+
 PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}')
 # Progress spinner utilities
 spinner() {
@@ -36,37 +116,41 @@ run_with_spinner() {
 
 # is python 3.11 if not uninstall and install python 3.11
 if [[ "$PYTHON_VERSION" != 3.11* ]]; then
-    echo "Python 3.11 is required. Found version $PYTHON_VERSION"
-    # Check if pyenv is installed
-    if ! command -v pyenv &> /dev/null; then
-      echo "pyenv is not installed. Installing pyenv (this may take a few minutes)..."
-      if [[ -d "$HOME/.pyenv" ]]; then
-        echo "Found existing ~/.pyenv directory; reusing instead of re-installing."
-      else
-        run_with_spinner "Installing pyenv" bash -lc 'curl https://pyenv.run | bash'
-      fi
-      export PATH="$HOME/.pyenv/bin:$PATH"
-      # shellcheck disable=SC2155
-      export PYENV_ROOT="$HOME/.pyenv"
-      eval "$(pyenv init --path)" >/dev/null 2>&1 || true
-      eval "$(pyenv init -)" >/dev/null 2>&1 || true
-
-        echo "pyenv installed. Installing Python 3.11 (this can be slow)..."
-        run_with_spinner "Installing Python 3.11 via pyenv" pyenv install -s 3.11
-        echo "Setting local Python version to 3.11"
-        run_with_spinner "Activating Python 3.11" pyenv local 3.11
-        exec "$0" "$@"
-    # Check if pyenv has python 3.11 installed
-    elif ! pyenv versions --bare | grep -q "^3.11"; then
-        echo "Python 3.11 is not installed in pyenv. Installing (this can take a while)..."
-        run_with_spinner "Installing Python 3.11 via pyenv" pyenv install -s 3.11
-        echo "Setting local Python version to 3.11"
-        run_with_spinner "Activating Python 3.11" pyenv local 3.11
-        exec "$0" "$@"
+    if [[ "$SKIP_PYENV" == "1" ]]; then
+        echo "python3 version is $PYTHON_VERSION (expected 3.11). Skipping pyenv enforcement per configuration."
     else
-        echo "pyenv manages 3.11 but it is not active. Activating now."
-        run_with_spinner "Activating Python 3.11" pyenv local 3.11
-        exec "$0" "$@"
+        echo "Python 3.11 is required. Found version $PYTHON_VERSION"
+        # Check if pyenv is installed
+        if ! command -v pyenv &> /dev/null; then
+          echo "pyenv is not installed. Installing pyenv (this may take a few minutes)..."
+          if [[ -d "$HOME/.pyenv" ]]; then
+            echo "Found existing ~/.pyenv directory; reusing instead of re-installing."
+          else
+            run_with_spinner "Installing pyenv" bash -lc 'curl https://pyenv.run | bash'
+          fi
+          export PATH="$HOME/.pyenv/bin:$PATH"
+          # shellcheck disable=SC2155
+          export PYENV_ROOT="$HOME/.pyenv"
+          eval "$(pyenv init --path)" >/dev/null 2>&1 || true
+          eval "$(pyenv init -)" >/dev/null 2>&1 || true
+
+            echo "pyenv installed. Installing Python 3.11 (this can be slow)..."
+            run_with_spinner "Installing Python 3.11 via pyenv" pyenv install -s 3.11
+            echo "Setting local Python version to 3.11"
+            run_with_spinner "Activating Python 3.11" pyenv local 3.11
+            exec "$0" "$@"
+        # Check if pyenv has python 3.11 installed
+        elif ! pyenv versions --bare | grep -q "^3.11"; then
+            echo "Python 3.11 is not installed in pyenv. Installing (this can take a while)..."
+            run_with_spinner "Installing Python 3.11 via pyenv" pyenv install -s 3.11
+            echo "Setting local Python version to 3.11"
+            run_with_spinner "Activating Python 3.11" pyenv local 3.11
+            exec "$0" "$@"
+        else
+            echo "pyenv manages 3.11 but it is not active. Activating now."
+            run_with_spinner "Activating Python 3.11" pyenv local 3.11
+            exec "$0" "$@"
+        fi
     fi
 fi
 
@@ -116,18 +200,73 @@ else
   info "Backend dependencies already installed (requirements hash matches)"
 fi
 
+DEV_REQ_FILE="$BACKEND_DIR/requirements-dev.txt"
+if [[ "$INSTALL_DEV_REQS" == "1" ]]; then
+  if [[ -f "$DEV_REQ_FILE" ]]; then
+    info "Installing backend dev requirements"
+    pip install -r "$DEV_REQ_FILE"
+  else
+    info "Requested dev requirements install but $DEV_REQ_FILE not found; skipping"
+  fi
+fi
+
+FRONTEND_LOCK="$FRONTEND_DIR/package-lock.json"
+FRONTEND_LOCK_HASH=""
+if [[ -f "$FRONTEND_LOCK" ]]; then
+  FRONTEND_LOCK_HASH=$(sha256sum "$FRONTEND_LOCK" 2>/dev/null | awk '{print $1}')
+fi
+FRONTEND_MARK="$FRONTEND_DIR/.node_modules-hash"
+EXISTING_NODE_HASH=""
+if [[ -f "$FRONTEND_MARK" ]]; then
+  EXISTING_NODE_HASH=$(<"$FRONTEND_MARK")
+fi
+
+NPM_INSTALL_CMD="npm install"
+if [[ "$USE_NPM_CI" == "1" ]]; then
+  if [[ -f "$FRONTEND_LOCK" ]]; then
+    NPM_INSTALL_CMD="npm ci"
+  else
+    echo "Requested npm ci but $FRONTEND_LOCK is missing; falling back to npm install" >&2
+  fi
+fi
+
+NEED_FRONTEND_INSTALL=0
+if [[ "$USE_NPM_CI" == "1" ]]; then
+  NEED_FRONTEND_INSTALL=1
+elif [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
+  NEED_FRONTEND_INSTALL=1
+elif [[ -n "$FRONTEND_LOCK_HASH" && "$FRONTEND_LOCK_HASH" != "$EXISTING_NODE_HASH" ]]; then
+  NEED_FRONTEND_INSTALL=1
+fi
+
+if [[ "$NEED_FRONTEND_INSTALL" -eq 1 ]]; then
+  if ! command -v npm >/dev/null 2>&1; then
+    echo "npm is required but not found in PATH." >&2
+    exit 1
+  fi
+  info "Installing frontend dependencies using '$NPM_INSTALL_CMD'"
+  (
+    cd "$FRONTEND_DIR"
+    $NPM_INSTALL_CMD
+  )
+  if [[ -n "$FRONTEND_LOCK_HASH" ]]; then
+    printf "%s" "$FRONTEND_LOCK_HASH" > "$FRONTEND_MARK"
+  fi
+else
+  info "Frontend dependencies already match package-lock (hash cache)"
+fi
+
+if [[ "$MODE" == "install" ]]; then
+  info "Install-only mode detected; skipping server startup."
+  exit 0
+fi
+
 info "Starting backend on http://localhost:$BACKEND_PORT"
 (
   cd "$BACKEND_DIR"
   uvicorn main:app --host 0.0.0.0 --port "$BACKEND_PORT" --reload
 ) &
 BACKEND_PID=$!
-
-if [[ ! -d "$FRONTEND_DIR/node_modules" ]]; then
-  info "Installing frontend dependencies"
-  cd "$FRONTEND_DIR"
-  npm install
-fi
 
 info "Starting frontend on http://localhost:$FRONTEND_PORT"
 cd "$FRONTEND_DIR"
