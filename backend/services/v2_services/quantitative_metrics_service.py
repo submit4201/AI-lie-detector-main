@@ -476,6 +476,11 @@ class QuantitativeMetricsService(AnalysisService):
         speaker_diarization = meta.get("speaker_diarization")
         sentiment_trend_data_input = meta.get("sentiment_trend")
         
+        # Get context for determining effective transcript
+        ctx = None
+        if meta:
+            ctx = meta.get("analysis_context")
+        
         # Get effective transcript from context if available
         effective_transcript = transcript
         is_partial = True
