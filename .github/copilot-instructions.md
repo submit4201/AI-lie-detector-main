@@ -10,7 +10,7 @@ This is a full-stack application with two main components:
 
 ### Backend (`backend/`)
 - **Framework**: FastAPI with Pydantic for data validation
-- **Language**: Python 3.12+
+- **Language**: Python 3.11
 - **AI Integration**: Google Gemini AI for deception analysis
 - **Speech Processing**: SpeechRecognition library with Google Speech-to-Text
 - **Audio Processing**: PyDub for audio quality assessment
