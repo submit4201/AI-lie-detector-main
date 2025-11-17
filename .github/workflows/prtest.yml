@@ -1,0 +1,45 @@
+name: Pull Request workspace tests 2
+
+on:
+  pull_request:
+
+jobs:
+  pull_request_tests:
+    name: Pull Request workspace tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Set up Node (for frontend tests)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Make start_workspace script executable
+        run: chmod +x ./start_workspace.sh
+
+      - name: Install workspace dependencies
+        env:
+          START_WORKSPACE_MODE: install
+          START_WORKSPACE_INSTALL_DEV: 1
+          START_WORKSPACE_NPM_CI: 1
+          START_WORKSPACE_SKIP_PYENV: 1
+        run: |
+          ./start_workspace.sh --install-only --install-dev --npm-ci --skip-pyenv
+
+      - name: Run backend unit tests
+        run: |
+          source backend/.venv/bin/activate
+          pytest -q
+
+      - name: Run frontend tests
+        working-directory: frontend
+        run: |
+          npm test -- --run
