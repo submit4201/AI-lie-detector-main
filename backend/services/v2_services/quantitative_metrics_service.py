@@ -466,8 +466,21 @@ class QuantitativeMetricsService(AnalysisService):
             return NumericalLinguisticMetrics() # Return default if no text
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
-    async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> Dict[str, Any]:
-        """Performs full analysis returning both interaction and numerical linguistic metrics."""
+    async def _stream_analyze_core(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]):
+        """Core streaming analyzer that yields coarse and final analysis results.
+        
+        This is the internal async generator that performs the actual streaming analysis.
+        It yields intermediate "coarse" results followed by a final result when sufficient
+        data is available.
+        
+        Args:
+            transcript: Input transcript text (may be partial or empty)
+            audio: Optional raw audio bytes
+            meta: Metadata dict including "analysis_context" with AnalysisContext instance
+            
+        Yields:
+            Dicts with standardized v2 result shape including partial/phase/chunk_index
+        """
         # Use provided audio if available, otherwise use instance audio_data
         audio_bytes = audio or self.audio_data
         
@@ -475,6 +488,11 @@ class QuantitativeMetricsService(AnalysisService):
         audio_duration_seconds = meta.get("duration")
         speaker_diarization = meta.get("speaker_diarization")
         sentiment_trend_data_input = meta.get("sentiment_trend")
+        
+        # Get context for determining effective transcript
+        ctx = None
+        if meta:
+            ctx = meta.get("analysis_context")
         
         # Get effective transcript from context if available
         effective_transcript = transcript
@@ -623,33 +641,19 @@ class QuantitativeMetricsService(AnalysisService):
         }
 
     async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
-        """Provide coarse metrics while transcript is partial, then final metrics once the transcript finalizes."""
-        ctx = None
-        if meta:
-            ctx = meta.get("analysis_context")
-
-        # If we have a context and partial transcript, emit early metric
-        if ctx and ctx.transcript_partial:
-            try:
-                metrics = self._calculate_numerical_linguistic_metrics(ctx.transcript_partial, ctx.audio_summary.get("duration"))
-                partial_payload = {
-                    "service_name": self.serviceName,
-                    "service_version": self.serviceVersion,
-                    "local": {"numerical_linguistic_metrics": metrics.__dict__ if hasattr(metrics, '__dict__') else {}},
-                    "gemini": None,
-                    "errors": None,
-                }
-                yield partial_payload
-            except Exception:
-                pass
-
-        # Wait for final transcript if available from context
-        if ctx:
-            waited = 0
-            while ctx.transcript_final is None and waited < 2:
-                await asyncio.sleep(0.1)
-                waited += 0.1
-
-        final_text = transcript or (ctx.transcript_final if ctx else transcript)
-        final_payload = await self.analyze(final_text, audio, meta or {})
-        yield final_payload
+        """Stream analysis yielding coarse and final results.
+        
+        This is the primary streaming interface that delegates to the core implementation.
+        Context retrieval and effective transcript determination are handled in the core method.
+        
+        Args:
+            transcript: Input transcript text
+            audio: Optional raw audio bytes
+            meta: Optional metadata dict
+            
+        Yields:
+            Analysis result dicts with partial/phase/chunk_index
+        """
+        meta = meta or {}
+        async for chunk in self._stream_analyze_core(transcript, audio, meta):
+            yield chunk
