@@ -98,3 +98,5 @@ onnxruntime-directml; platform_system == "Windows" and python_version < "3.11"
 #optimum[openvino]
 pydub
 pydantic
+scipy
+praat-parselmouth

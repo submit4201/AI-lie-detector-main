@@ -11,4 +11,5 @@ pydantic>=2.8,<3
 python-dotenv
 pydub
 numpy
-.
+scipy
+praat-parselmouth
