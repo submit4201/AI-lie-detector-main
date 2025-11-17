@@ -14,6 +14,47 @@ from backend.services.v2_services.quantitative_metrics_service import Quantitati
 from backend.services.v2_services.transcription_service import TranscriptionService
 from backend.services.v2_services.audio_analysis_service import AudioAnalysisService
 
+# Lazy imports for additional services to avoid circular dependencies
+def _lazy_import_manipulation_service():
+    from backend.services.v2_services.manipulation_service import ManipulationService
+    return ManipulationService
+
+def _lazy_import_argument_service():
+    from backend.services.v2_services.argument_service import ArgumentService
+    return ArgumentService
+
+def _lazy_import_speaker_attitude_service():
+    from backend.services.v2_services.speaker_attitude_service import SpeakerAttitudeServiceV2
+    return SpeakerAttitudeServiceV2
+
+def _lazy_import_psychological_service():
+    from backend.services.v2_services.psychological_service import PsychologicalServiceV2
+    return PsychologicalServiceV2
+
+def _lazy_import_enhanced_understanding_service():
+    from backend.services.v2_services.enhanced_understanding_service import EnhancedUnderstandingServiceV2
+    return EnhancedUnderstandingServiceV2
+
+def _lazy_import_conversation_flow_service():
+    from backend.services.v2_services.conversation_flow_service import ConversationFlowServiceV2
+    return ConversationFlowServiceV2
+
+def _lazy_import_session_insights_service():
+    from backend.services.v2_services.session_insights_service import SessionInsightsServiceV2
+    return SessionInsightsServiceV2
+
+def _lazy_import_linguistic_service():
+    from backend.services.v2_services.linguistic_service import LinguisticServiceV2
+    return LinguisticServiceV2
+
+def _lazy_import_enhanced_acoustic_service():
+    from backend.services.v2_services.enhanced_acoustic_service import EnhancedAcousticService
+    return EnhancedAcousticService
+
+def _lazy_import_credibility_scoring_service():
+    from backend.services.v2_services.credibility_scoring_service import CredibilityScoringService
+    return CredibilityScoringService
+
 ServiceFactory = Callable[[Dict[str, Any]], AnalysisService]
 
 #################
@@ -79,24 +120,61 @@ SERVICE_FACTORIES: Dict[str, Callable[[Dict[str, Any]], AnalysisService]] = {
         audio_data=context.get("audio"),
         meta=context.get("meta", {}),
     ),
-    "manipulation": lambda context: __import__('backend.services.v2_services.manipulation_service', fromlist=['ManipulationService']).ManipulationService(
+    "manipulation": lambda context: _lazy_import_manipulation_service()(
         gemini_client=context.get("gemini_client"),
         transcript=context.get("transcript", ""),
         meta=context.get("meta", {}),
     ),
-    "argument": lambda context: __import__('backend.services.v2_services.argument_service', fromlist=['ArgumentService']).ArgumentService(
+    "argument": lambda context: _lazy_import_argument_service()(
         gemini_client=context.get("gemini_client"),
         transcript=context.get("transcript", ""),
         meta=context.get("meta", {}),
     ),
-    # Add other v2 services here as they are migrated
-    # e.g., "linguistic": lambda context: LinguisticService(**context),
+    "speaker_attitude": lambda context: _lazy_import_speaker_attitude_service()(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "psychological": lambda context: _lazy_import_psychological_service()(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "enhanced_understanding": lambda context: _lazy_import_enhanced_understanding_service()(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "conversation_flow": lambda context: _lazy_import_conversation_flow_service()(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "session_insights": lambda context: _lazy_import_session_insights_service()(
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "linguistic": lambda context: _lazy_import_linguistic_service()(
+        gemini_client=context.get("gemini_client"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    "enhanced_acoustic": lambda context: _lazy_import_enhanced_acoustic_service()(
+        transcript=context.get("transcript", ""),
+        audio_data=context.get("audio"),
+        meta=context.get("meta", {}),
+    ),
+    "credibility_scoring": lambda context: _lazy_import_credibility_scoring_service()(
+        baseline_profile=context.get("meta", {}).get("baseline_profile"),
+        transcript=context.get("transcript", ""),
+        meta=context.get("meta", {}),
+    ),
+    # All v1 services now have v2 equivalents + advanced credibility analysis
 }
 
+# Register all available v2 services by default, as per line 128 comment.
 REGISTERED_SERVICES: List[Callable[[Dict[str, Any]], AnalysisService]] = [
     SERVICE_FACTORIES["transcription"],
     SERVICE_FACTORIES["audio_analysis"],
     SERVICE_FACTORIES["quantitative_metrics"],
-    SERVICE_FACTORIES["manipulation"],
-    SERVICE_FACTORIES["argument"],
 ]

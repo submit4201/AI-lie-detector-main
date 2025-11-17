@@ -83,7 +83,7 @@ google-genai
 python-dotenv
 pytest==7.4.2
 pytest-cov==4.1.0
-onnxruntime-directml
+onnxruntime-directml; platform_system == "Windows" and python_version < "3.11"
 # OpenVINO and Optimum (commented out)
 # The lines below are commented because `openvino-dev[onnx]` and `optimum[openvino]`
 # can pull older, hard-to-build dependencies (e.g., old `scipy`/`numpy`) that cause
@@ -96,3 +96,5 @@ onnxruntime-directml
 # Or use conda for a smoother install on Windows: https://docs.openvino.ai/
 #openvino-dev[onnx]
 #optimum[openvino]
+pydub
+pydantic

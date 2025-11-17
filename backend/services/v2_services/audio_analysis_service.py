@@ -79,122 +79,39 @@ class AudioAnalysisService(AnalysisService):
             background_noise_level=0,  # Placeholder
         )
 
-    async def stream_analyze(
-        self,
-        transcript: Optional[str] = None,
-        audio: Optional[bytes] = None,
-        meta: Optional[Dict[str, Any]] = None
-    ):
-        """
-        Stream audio quality analysis with incremental results.
-        
-        Yields:
-        - Coarse phase: Quick preliminary metrics (duration, sample rate)
-        - Final phase: Complete quality assessment
-        """
-        if not audio:
-            logger.warning("No audio data provided to AudioAnalysisService.")
-            error_model = ErrorResponse(
-                error="No audio data provided.",
-                code=400,
-                details={},
-                suggestion="Upload a supported audio file (WAV, MP3, etc.)",
-            )
-            yield {
-                "service_name": self.serviceName,
-                "service_version": self.serviceVersion,
-                "local": AudioQualityMetrics().model_dump(),
-                "gemini": None,
-                "errors": [error_model.model_dump()],
-                "partial": False,
-                "phase": "final",
-                "chunk_index": 0
-            }
-            return
-
-        try:
-            audio_segment = AudioSegment.from_file(io.BytesIO(audio))
-            
-            # Phase 1: Yield quick preliminary metrics (coarse)
-            quick_metrics = {
-                "duration": round(audio_segment.duration_seconds, 2),
-                "sample_rate": audio_segment.frame_rate,
-                "channels": audio_segment.channels,
-            }
-            
-            yield {
-                "service_name": self.serviceName,
-                "service_version": self.serviceVersion,
-                "local": quick_metrics,
-                "gemini": None,
-                "errors": [],
-                "partial": True,
-                "phase": "coarse",
-                "chunk_index": 0
-            }
-            
-            # Phase 2: Complete analysis (final)
-            quality_metrics = self._assess_audio_quality(audio_segment)
-            logger.info("Audio quality analysis successful.")
-            
-            # Update meta with duration if not present
-            if meta and 'duration' not in meta:
-                meta['duration'] = quality_metrics.duration
-
-            yield {
-                "service_name": self.serviceName,
-                "service_version": self.serviceVersion,
-                "local": quality_metrics.model_dump(),
-                "gemini": None,
-                "errors": [],
-                "partial": False,
-                "phase": "final",
-                "chunk_index": 1
-            }
-        except Exception as e:
-            logger.error(f"Audio quality analysis failed: {e}", exc_info=True)
-            error_model = ErrorResponse(
-                error="Audio processing failed",
-                code=500,
-                details={"exception_str": str(e)},
-                suggestion="Ensure the uploaded file is a valid audio format and not corrupt.",
-            )
-            yield {
-                "service_name": self.serviceName,
-                "service_version": self.serviceVersion,
-                "local": AudioQualityMetrics().model_dump(),
-                "gemini": None,
-                "errors": [error_model.model_dump()],
-                "partial": False,
-                "phase": "final",
-                "chunk_index": 0
-            }
-
     async def analyze(
         self,
         transcript: Optional[str] = None,
         audio: Optional[bytes] = None,
         meta: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
-        """Analyzes the audio bytes to determine quality metrics (non-streaming)."""
+    ):
+        """Streaming analysis: yields coarse then final audio quality metrics.
+        
+        Phase 1 (coarse): Quick basic metrics like duration
+        Phase 2 (final): Complete audio quality analysis with all metrics
+        """
+        meta = meta or {}
+        ctx = meta.get("analysis_context")
+        
         if not audio:
             logger.warning("No audio data provided to AudioAnalysisService.")
-            # Return a structured error using the ErrorResponse model so the API
-            # surface is consistent and testable. Note: we intentionally don't
-            # include raw audio content in the error log.
             error_model = ErrorResponse(
                 error="No audio data provided.",
                 code=400,
                 details={},
                 suggestion="Upload a supported audio file (WAV, MP3, etc.)",
             )
-            return {
+            yield {
                 "service_name": self.serviceName,
                 "service_version": self.serviceVersion,
                 "local": AudioQualityMetrics().model_dump(),
                 "gemini": None,
                 "errors": [error_model.model_dump()],
+                "partial": False,
+                "phase": "final",
+                "chunk_index": None,
             }
+            return
 
         async def stream_analyze(self, transcript: Optional[str] = None, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
             """Yield a coarse audio summary immediately (if possible), then the full analysis."""
@@ -230,33 +147,83 @@ class AudioAnalysisService(AnalysisService):
 
         try:
             audio_segment = AudioSegment.from_file(io.BytesIO(audio))
+            
+            # Phase 1: Coarse - yield quick basic metrics
+            coarse_metrics = {
+                "duration": round(audio_segment.duration_seconds, 2),
+                "sample_rate": audio_segment.frame_rate,
+                "channels": audio_segment.channels,
+            }
+            
+            # Update context with basic audio info
+            if ctx:
+                ctx.audio_summary.update(coarse_metrics)
+            
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": coarse_metrics,
+                "gemini": None,
+                "errors": [],
+                "partial": True,
+                "phase": "coarse",
+                "chunk_index": 0,
+            }
+            
+            # Phase 2: Final - complete quality analysis
             quality_metrics = self._assess_audio_quality(audio_segment)
             logger.info("Audio quality analysis successful.")
             
-            # Update meta with duration if not present
+            # Update meta and context with duration
             if meta and 'duration' not in meta:
                 meta['duration'] = quality_metrics.duration
+            if ctx:
+                ctx.audio_summary.update(quality_metrics.model_dump())
 
-            return {
+            yield {
                 "service_name": self.serviceName,
                 "service_version": self.serviceVersion,
                 "local": quality_metrics.model_dump(),
                 "gemini": None,
                 "errors": None,
+                "partial": False,
+                "phase": "final",
+                "chunk_index": 1,
             }
+            
         except Exception as e:
             logger.error(f"Audio quality analysis failed: {e}", exc_info=True)
-            # Return a structured ErrorResponse with sanitized details
             error_model = ErrorResponse(
                 error="Audio processing failed",
                 code=500,
                 details={"exception_str": str(e)},
                 suggestion="Ensure the uploaded file is a valid audio format and not corrupt.",
             )
-            return {
+            yield {
                 "service_name": self.serviceName,
                 "service_version": self.serviceVersion,
                 "local": AudioQualityMetrics().model_dump(),
                 "gemini": None,
                 "errors": [error_model.model_dump()],
+                "partial": False,
+                "phase": "final",
+                "chunk_index": None,
             }
+
+    async def analyze(
+        self,
+        transcript: Optional[str] = None,
+        audio: Optional[bytes] = None,
+        meta: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """Convenience wrapper: consumes stream_analyze and returns final result."""
+        result = None
+        async for chunk in self.stream_analyze(transcript, audio, meta):
+            result = chunk
+        return result or {
+            "service_name": self.serviceName,
+            "service_version": self.serviceVersion,
+            "local": AudioQualityMetrics().model_dump(),
+            "gemini": None,
+            "errors": [{"error": "No results produced"}],
+        }

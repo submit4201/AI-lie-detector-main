@@ -160,7 +160,7 @@ npm run test:coverage
 The `.github/workflows/tests.yml` file defines automated testing:
 
 **Backend Tests Job:**
-- Runs on Python 3.12
+- Runs on Python 3.11
 - Installs dependencies: pytest, pytest-cov, pydantic, httpx, fastapi, etc.
 - Runs all unit tests with coverage
 - Uploads coverage to Codecov

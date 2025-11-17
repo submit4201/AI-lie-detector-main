@@ -112,7 +112,8 @@ class QuantitativeMetricsService(AnalysisService):
         # Placeholder for calculated formality and complexity - requires more sophisticated algorithms
         formality_score_calculated = 50.0 # Default placeholder
         complexity_score_calculated = 50.0 # Default placeholder
-        NumericalLinguisticMetrics(
+        
+        metrics = NumericalLinguisticMetrics(
             word_count=word_count,
             unique_word_count=unique_word_count,
             hesitation_marker_count=hesitation_marker_count,
@@ -130,9 +131,8 @@ class QuantitativeMetricsService(AnalysisService):
             formality_score_calculated=formality_score_calculated,
             complexity_score_calculated=complexity_score_calculated
         )
-        self.NumericalLinguisticMetrics = NumericalLinguisticMetrics
 
-        return self.NumericalLinguisticMetrics
+        return metrics
 
     @staticmethod
     def _normalize_sentiment_trend(
@@ -466,91 +466,8 @@ class QuantitativeMetricsService(AnalysisService):
             return NumericalLinguisticMetrics() # Return default if no text
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
-    async def stream_analyze(
-        self,
-        transcript: Optional[str] = None,
-        audio: Optional[bytes] = None,
-        meta: Optional[Dict[str, Any]] = None
-    ):
-        """
-        Stream quantitative metrics analysis with incremental results.
-        
-        Yields:
-        - Coarse phase: Quick numerical linguistic metrics
-        - Final phase: Complete metrics including Gemini interaction analysis
-        """
-        meta = meta or {}
-        audio_bytes = audio or self.audio_data
-        
-        # Extract metadata
-        audio_duration_seconds = meta.get("duration")
-        speaker_diarization = meta.get("speaker_diarization")
-        sentiment_trend_data_input = meta.get("sentiment_trend")
-        
-        logger.info(f"Starting v2 streaming analysis for transcript. Duration: {audio_duration_seconds}s")
-        
-        # Phase 1: Yield quick numerical linguistic metrics (coarse)
-        try:
-            numerical_linguistic_metrics = await self.get_numerical_linguistic_metrics(
-                transcript or "", 
-                audio_duration_seconds
-            )
-            
-            yield {
-                "service_name": self.serviceName,
-                "service_version": self.serviceVersion,
-                "local": {
-                    "numerical_linguistic_metrics": numerical_linguistic_metrics.__dict__ if hasattr(numerical_linguistic_metrics, '__dict__') else {},
-                    "transcript_length": len(transcript or ""),
-                    "audio_duration": audio_duration_seconds
-                },
-                "gemini": {},
-                "errors": [],
-                "partial": True,
-                "phase": "coarse",
-                "chunk_index": 0
-            }
-        except Exception as e:
-            logger.error(f"Numerical linguistic metrics calculation failed: {e}", exc_info=True)
-            numerical_linguistic_metrics = NumericalLinguisticMetrics()
-        
-        # Phase 2: Add Gemini interaction analysis (final)
-        try:
-            interaction_metrics = await self.analyze_interaction_metrics(
-                text=transcript or "",
-                audio_data=audio_bytes,
-                speaker_diarization=speaker_diarization,
-                sentiment_trend_data_input=sentiment_trend_data_input,
-                audio_duration_seconds=audio_duration_seconds,
-            )
-        except Exception as e:
-            logger.error(f"Interaction metrics analysis failed: {e}", exc_info=True)
-            interaction_metrics = self._fallback_interaction_analysis(
-                transcript or "", 
-                speaker_diarization, 
-                sentiment_trend_data_input, 
-                audio_duration_seconds
-            )
-            
-        yield {
-            "service_name": self.serviceName,
-            "service_version": self.serviceVersion,
-            "local": {
-                "numerical_linguistic_metrics": numerical_linguistic_metrics.__dict__ if hasattr(numerical_linguistic_metrics, '__dict__') else {},
-                "transcript_length": len(transcript or ""),
-                "audio_duration": audio_duration_seconds
-            },
-            "gemini": {
-                "interaction_metrics": interaction_metrics.__dict__ if hasattr(interaction_metrics, '__dict__') else {}
-            },
-            "errors": [],
-            "partial": False,
-            "phase": "final",
-            "chunk_index": 1
-        }
-    
     async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> Dict[str, Any]:
-        """Performs full analysis returning both interaction and numerical linguistic metrics (non-streaming)."""
+        """Performs full analysis returning both interaction and numerical linguistic metrics."""
         # Use provided audio if available, otherwise use instance audio_data
         audio_bytes = audio or self.audio_data
         
@@ -559,43 +476,150 @@ class QuantitativeMetricsService(AnalysisService):
         speaker_diarization = meta.get("speaker_diarization")
         sentiment_trend_data_input = meta.get("sentiment_trend")
         
-        logger.info(f"Starting v2 analysis for transcript. Duration: {audio_duration_seconds}s")
+        # Get effective transcript from context if available
+        effective_transcript = transcript
+        is_partial = True
+        if ctx:
+            effective_transcript = ctx.transcript_final or ctx.transcript_partial or transcript
+            is_partial = ctx.transcript_final is None
         
+        logger.info(f"Starting v2 streaming analysis. Partial: {is_partial}, Duration: {audio_duration_seconds}s")
+        
+        # Phase 1: Coarse - quick local metrics only
+        coarse_local = {}  # Initialize to prevent NameError
         try:
-            # Try to get Gemini analysis first
-            interaction_metrics = await self.analyze_interaction_metrics(
-                text=transcript or "",
-                audio_data=audio_bytes,
-                speaker_diarization=speaker_diarization,
-                sentiment_trend_data_input=sentiment_trend_data_input,
-                audio_duration_seconds=audio_duration_seconds,
-            )
-        except Exception as e:
-            logger.error(f"Interaction metrics analysis failed: {e}", exc_info=True)
-            # Fallback to local-only analysis if Gemini fails
-            interaction_metrics = self._fallback_interaction_analysis(transcript or "", speaker_diarization, sentiment_trend_data_input, audio_duration_seconds)
-            
-        try:
-            numerical_linguistic_metrics = await self.get_numerical_linguistic_metrics(
-                transcript or "", 
+            coarse_numerical = await self.get_numerical_linguistic_metrics(
+                effective_transcript or "", 
                 audio_duration_seconds
             )
-        except Exception as e:
-            logger.error(f"Numerical linguistic metrics calculation failed: {e}", exc_info=True)
-            numerical_linguistic_metrics = NumericalLinguisticMetrics()
             
-        return {
+            # Convert to dict safely
+            if hasattr(coarse_numerical, 'model_dump'):
+                numerical_dict = coarse_numerical.model_dump()
+            elif hasattr(coarse_numerical, '__dict__'):
+                numerical_dict = coarse_numerical.__dict__
+            else:
+                numerical_dict = {}
+            
+            coarse_local = {
+                "numerical_linguistic_metrics": numerical_dict,
+                "transcript_length": len(effective_transcript or ""),
+                "audio_duration": audio_duration_seconds,
+                "word_count": numerical_dict.get("word_count", 0),
+            }
+            
+            # Update context with coarse metrics
+            if ctx:
+                ctx.quantitative_metrics.update(coarse_local)
+            
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": coarse_local,
+                "gemini": None,
+                "errors": [],
+                "partial": True,
+                "phase": "coarse",
+                "chunk_index": 0,
+            }
+        except Exception as e:
+            logger.error(f"Coarse metrics calculation failed: {e}", exc_info=True)
+            coarse_local = {}  # Ensure it's defined even on error
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": {},
+                "gemini": None,
+                "errors": [{"error": "Coarse metrics failed", "details": str(e)}],
+                "partial": True,
+                "phase": "coarse",
+                "chunk_index": 0,
+            }
+        
+        # Phase 2: Final - complete analysis with Gemini interaction metrics
+        # Proceed if: (1) we have a final transcript, OR (2) we have enough partial data (>= 30 words)
+        has_sufficient_data = (not is_partial) or (effective_transcript and len(effective_transcript.split()) >= 30)
+        if has_sufficient_data:
+            try:
+                # Try to get Gemini analysis
+                interaction_metrics = await self.analyze_interaction_metrics(
+                    text=effective_transcript or "",
+                    audio_data=audio_bytes,
+                    speaker_diarization=speaker_diarization,
+                    sentiment_trend_data_input=sentiment_trend_data_input,
+                    audio_duration_seconds=audio_duration_seconds,
+                )
+            except Exception as e:
+                logger.error(f"Interaction metrics analysis failed: {e}", exc_info=True)
+                # Fallback to local-only analysis if Gemini fails
+                interaction_metrics = self._fallback_interaction_analysis(
+                    effective_transcript or "", 
+                    speaker_diarization, 
+                    sentiment_trend_data_input, 
+                    audio_duration_seconds
+                )
+                
+            try:
+                numerical_linguistic_metrics = await self.get_numerical_linguistic_metrics(
+                    effective_transcript or "", 
+                    audio_duration_seconds
+                )
+            except Exception as e:
+                logger.error(f"Numerical linguistic metrics calculation failed: {e}", exc_info=True)
+                numerical_linguistic_metrics = NumericalLinguisticMetrics()
+            
+            final_local = {
+                "numerical_linguistic_metrics": numerical_linguistic_metrics.__dict__ if hasattr(numerical_linguistic_metrics, '__dict__') else {},
+                "transcript_length": len(effective_transcript or ""),
+                "audio_duration": audio_duration_seconds
+            }
+            
+            final_gemini = {
+                "interaction_metrics": interaction_metrics.__dict__ if hasattr(interaction_metrics, '__dict__') else {}
+            }
+            
+            # Update context with final metrics
+            if ctx:
+                ctx.quantitative_metrics.update(final_local)
+                ctx.service_results["quantitative_metrics"] = {
+                    "local": final_local,
+                    "gemini": final_gemini
+                }
+            
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": final_local,
+                "gemini": final_gemini,
+                "errors": None,
+                "partial": False,
+                "phase": "final",
+                "chunk_index": 1,
+            }
+        else:
+            # Not enough data for final analysis yet, mark coarse as final for now
+            yield {
+                "service_name": self.serviceName,
+                "service_version": self.serviceVersion,
+                "local": coarse_local,
+                "gemini": None,
+                "errors": [],
+                "partial": False,
+                "phase": "coarse",
+                "chunk_index": 0,
+            }
+
+    async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> Dict[str, Any]:
+        """Convenience wrapper: consumes stream_analyze and returns final result."""
+        result = None
+        async for chunk in self.stream_analyze(transcript, audio, meta):
+            result = chunk
+        return result or {
             "service_name": self.serviceName,
             "service_version": self.serviceVersion,
-            "local": {
-                "numerical_linguistic_metrics": numerical_linguistic_metrics.__dict__ if hasattr(numerical_linguistic_metrics, '__dict__') else {},
-                "transcript_length": len(transcript or ""),
-                "audio_duration": audio_duration_seconds
-            },
-            "gemini": {
-                "interaction_metrics": interaction_metrics.__dict__ if hasattr(interaction_metrics, '__dict__') else {}
-            },
-            "errors": None
+            "local": {},
+            "gemini": None,
+            "errors": [{"error": "No results produced"}],
         }
 
     async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
