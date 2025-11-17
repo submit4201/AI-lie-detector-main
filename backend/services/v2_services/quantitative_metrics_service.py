@@ -466,8 +466,8 @@ class QuantitativeMetricsService(AnalysisService):
             return NumericalLinguisticMetrics() # Return default if no text
         return self._calculate_numerical_linguistic_metrics(text, audio_duration_seconds)
     
-    async def analyze(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]) -> Dict[str, Any]:
-        """Performs full analysis returning both interaction and numerical linguistic metrics."""
+    async def _stream_analyze_core(self, transcript: str, audio: Optional[bytes], meta: Dict[str, Any]):
+        """Performs full streaming analysis returning both interaction and numerical linguistic metrics as an async generator."""
         # Use provided audio if available, otherwise use instance audio_data
         audio_bytes = audio or self.audio_data
         
@@ -479,6 +479,7 @@ class QuantitativeMetricsService(AnalysisService):
         # Get effective transcript from context if available
         effective_transcript = transcript
         is_partial = True
+        ctx = getattr(self, "context", None)
         if ctx:
             effective_transcript = ctx.transcript_final or ctx.transcript_partial or transcript
             is_partial = ctx.transcript_final is None
@@ -623,33 +624,15 @@ class QuantitativeMetricsService(AnalysisService):
         }
 
     async def stream_analyze(self, transcript: str, audio: Optional[bytes] = None, meta: Optional[Dict[str, Any]] = None):
-        """Provide coarse metrics while transcript is partial, then final metrics once the transcript finalizes."""
+        """Top-level stream_analyze that delegates to the internal streaming core implementation."""
+        # Prefer delegating to the core streaming implementation which yields structured chunks.
+        final_text = transcript
         ctx = None
         if meta:
             ctx = meta.get("analysis_context")
+            # If context has a finalized transcript prefer that
+            final_text = transcript or (getattr(ctx, "transcript_final", None) or transcript)
 
-        # If we have a context and partial transcript, emit early metric
-        if ctx and ctx.transcript_partial:
-            try:
-                metrics = self._calculate_numerical_linguistic_metrics(ctx.transcript_partial, ctx.audio_summary.get("duration"))
-                partial_payload = {
-                    "service_name": self.serviceName,
-                    "service_version": self.serviceVersion,
-                    "local": {"numerical_linguistic_metrics": metrics.__dict__ if hasattr(metrics, '__dict__') else {}},
-                    "gemini": None,
-                    "errors": None,
-                }
-                yield partial_payload
-            except Exception:
-                pass
-
-        # Wait for final transcript if available from context
-        if ctx:
-            waited = 0
-            while ctx.transcript_final is None and waited < 2:
-                await asyncio.sleep(0.1)
-                waited += 0.1
-
-        final_text = transcript or (ctx.transcript_final if ctx else transcript)
-        final_payload = await self.analyze(final_text, audio, meta or {})
-        yield final_payload
+        # Delegate to the core async generator
+        async for chunk in self._stream_analyze_core(final_text, audio, meta or {}):
+            yield chunk
