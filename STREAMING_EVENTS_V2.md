@@ -33,6 +33,7 @@ Emitted when any service produces a result (partial or final).
 ```
 
 **Fields:**
+
 - `service`: Service identifier (e.g., "transcription", "manipulation", "argument")
 - `payload.partial`: `true` for intermediate results, `false` for final
 - `payload.phase`: Analysis phase - "coarse" for early/rough, "final" for complete
@@ -67,21 +68,25 @@ Emitted once when all analysis is complete.
 The v2 runner uses phased orchestration for optimal streaming:
 
 ### Phase A: Input Preparation
+
 - Create `AnalysisContext` with request data
 - Initialize configuration and session context
 
 ### Phase B: Foundational Services (Parallel)
+
 - **Transcription**: Stream audio→text with speaker diarization
 - **Audio Analysis**: Extract prosody, quality metrics, vocal patterns
 
 These run concurrently to minimize latency. Updates stream as available.
 
 ### Phase C: Quantitative Metrics
+
 - Triggered when sufficient transcript is available (20+ words)
 - Computes speech patterns, pauses, interruptions
 - May emit partial metrics before final
 
 ### Phase D: Higher-Level Analysis (Parallel)
+
 - **Manipulation Analysis**: Detect deception patterns, tactics
 - **Argument Analysis**: Extract claims, fallacies, logical structure
 - Both use accumulated context (transcript + audio + metrics)
@@ -92,6 +97,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ### TranscriptionService
 
 **Partial Update:**
+
 ```json
 {
   "service_name": "transcription",
@@ -104,6 +110,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ```
 
 **Final Update:**
+
 ```json
 {
   "service_name": "transcription",
@@ -121,6 +128,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ### AudioAnalysisService
 
 **Coarse Phase:**
+
 ```json
 {
   "service_name": "audio_analysis",
@@ -135,6 +143,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ```
 
 **Final Phase:**
+
 ```json
 {
   "service_name": "audio_analysis",
@@ -173,6 +182,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ### ManipulationService
 
 **Coarse Phase (early partial transcript):**
+
 ```json
 {
   "service_name": "manipulation",
@@ -194,6 +204,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ```
 
 **Final Phase (complete analysis):**
+
 ```json
 {
   "service_name": "manipulation",
@@ -214,6 +225,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ### ArgumentService
 
 **Coarse Phase:**
+
 ```json
 {
   "service_name": "argument",
@@ -236,6 +248,7 @@ These run concurrently to minimize latency. Updates stream as available.
 ```
 
 **Final Phase:**
+
 ```json
 {
   "service_name": "argument",
@@ -392,6 +405,7 @@ Services return errors in the `errors` field:
 ```
 
 UI should:
+
 - Display errors to users in a non-blocking way
 - Continue showing results from successful services
 - Allow retry for failed services if applicable
@@ -417,6 +431,7 @@ UI should:
 ## Migration from v1
 
 Key differences:
+
 - v1: Single-shot `POST /analyze` with batch processing
 - v2: Streaming `POST /v2/analyze/stream` with incremental results
 - v2 provides `AnalysisContext` for cross-service state

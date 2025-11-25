@@ -1,4 +1,7 @@
+# header
+
 <general_rules>
+
 When creating new functions or modules, always first search in the relevant `backend/` or `frontend/` subdirectories to see if similar functionality exists. If not, create it and place it in an existing or new file that logically groups related code.
 
 For frontend development, ensure your code adheres to the ESLint rules defined in `frontend/eslint.config.js`. You can run the linter using `npm run lint` in the `frontend/` directory.
@@ -66,6 +69,7 @@ The repository utilizes pytest for running tests. Tests are organized in the `te
 The v2 API is now the primary path with comprehensive streaming support:
 
 **Core Components:**
+
 - `AnalysisContext`: Central dataclass managing all analysis state without globals
 - `AnalysisService` protocol: `stream_analyze` is the primary method, `analyze` wraps it
 - `GeminiClientV2.json_stream`: Structured JSON streaming with Live/Simulated providers
@@ -73,7 +77,9 @@ The v2 API is now the primary path with comprehensive streaming support:
 - Phased orchestration: A→B→C→D (Input→Foundation→Metrics→HigherLevel)
 
 **Services:**
+
 - All services implement `stream_analyze` and return standardized shape:
+
   ```python
   {
     "service_name": str,
@@ -88,12 +94,14 @@ The v2 API is now the primary path with comprehensive streaming support:
   ```
 
 **Orchestration Flow:**
+
 1. **Phase A (Input)**: Create AnalysisContext with request data
 2. **Phase B (Foundation)**: Parallel transcription + audio analysis
 3. **Phase C (Metrics)**: Quantitative metrics once transcript threshold met
 4. **Phase D (Higher-Level)**: Parallel manipulation + argument analysis
 
 **SSE Events:**
+
 - `analysis.update`: Per-service partial or final results
 - `analysis.done`: Complete results with aggregated context
 
