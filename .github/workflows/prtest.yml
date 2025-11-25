@@ -2,6 +2,7 @@ name: Pull Request workspace tests 2
 
 on:
   pull_request:
+    branches: main2
 
 jobs:
   pull_request_tests:
